@@ -1,0 +1,14 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /api/
+
+  # Serve existing files directly
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+
+  # Everything else routes to the front controller
+  RewriteRule ^ index.php [L]
+</IfModule>
+
+# Fallback for environments without mod_rewrite
+FallbackResource /api/index.php

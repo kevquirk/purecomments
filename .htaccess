@@ -1,0 +1,13 @@
+<Files "config.php">
+    Require all denied
+</Files>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Restrict root admin endpoints by IP, but do not block /api/index.php.
+    # RewriteCond %{REQUEST_URI} ^/$|^/(index\.php|login\.php|settings\.php)$ [NC]
+    # RewriteCond %{REMOTE_ADDR} !^11\.22\.33\.44$
+    # RewriteCond %{REMOTE_ADDR} !^55\.66\.77\.88$
+    # RewriteRule ^ - [F,L]
+</IfModule>
