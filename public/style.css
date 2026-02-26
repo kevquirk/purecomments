@@ -83,7 +83,7 @@ a:hover {
   color: var(--accent);
 }
 
-input, textarea {
+input, textarea, select {
     background: var(--input-bg);
     color: var(--text);
     border: var(--standard-border);

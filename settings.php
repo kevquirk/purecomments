@@ -184,6 +184,10 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="/public/icons/sprite.svg#icon-back"></use></svg>
                 <span>Back to comments</span>
             </a>
+            <a class="button" href="/updates.php">
+                <svg class="button-icon" aria-hidden="true" focusable="false"><use href="/public/icons/sprite.svg#icon-upgrade"></use></svg>
+                <span>Updates</span>
+            </a>
             <a class="button danger" href="/logout.php">
                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="/public/icons/sprite.svg#icon-logout"></use></svg>
                 <span>Log out</span>

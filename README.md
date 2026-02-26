@@ -32,6 +32,7 @@ It provides:
 - Auto-publish pending comment when replying as author
 - Thread delete from root comment (`Delete thread` removes descendants)
 - Admin pagination (20 primary threads per page)
+- Admin update manager (check GitHub release, inspect package changes, apply update, restore backup)
 - Login rate limiting (5 failed attempts in 5 minutes)
 - Session hardening (`HttpOnly`, `SameSite`, strict mode, secure-on-HTTPS)
 
@@ -206,6 +207,7 @@ Then open:
 - `settings.php` - authenticated settings page
 - `logout.php` - logout endpoint
 - `setup.php` - first-run installer
+- `updates.php` - admin updates page (release check + apply + backup restore)
 - `api/index.php` - comments API
 - `includes/admin_auth.php` - auth + rate limiting helpers
 - `includes/config_builder.php` - shared `config.php` generation helper
