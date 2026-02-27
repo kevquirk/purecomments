@@ -27,8 +27,11 @@
     container.appendChild(header);
     container.appendChild(contentArea);
 
-    const slug = container.dataset.postSlug;
-    if (!slug || !/^[a-z0-9\-]+$/.test(slug)) {
+    const configuredSlug = typeof container.dataset.postSlug === 'string'
+        ? container.dataset.postSlug.trim()
+        : '';
+    const slug = normalizePostSlug(configuredSlug !== '' ? configuredSlug : derivePostSlugFromLocation(window.location.pathname));
+    if (!slug) {
         contentArea.textContent = 'Comments unavailable.';
         return;
     }
@@ -374,5 +377,38 @@
     function autoGrow(element) {
         element.style.height = 'auto';
         element.style.height = element.scrollHeight + 'px';
+    }
+
+    function derivePostSlugFromLocation(pathname) {
+        const trimmed = String(pathname || '').replace(/^\/+|\/+$/g, '');
+        if (trimmed === '') {
+            return 'home';
+        }
+
+        const parts = trimmed.split('/').filter(Boolean);
+        if (parts.length === 0) {
+            return 'home';
+        }
+
+        const last = parts[parts.length - 1];
+        const withoutExtension = last.replace(/\.[a-z0-9]{1,10}$/i, '');
+        if (withoutExtension.toLowerCase() === 'index') {
+            return 'home';
+        }
+        try {
+            return decodeURIComponent(withoutExtension);
+        } catch (error) {
+            return withoutExtension;
+        }
+    }
+
+    function normalizePostSlug(value) {
+        const normalized = String(value || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9\-]+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-+|-+$/g, '');
+
+        return normalized;
     }
 })();
