@@ -188,7 +188,7 @@
         form.noValidate = true;
 
         const heading = document.createElement('h3');
-        heading.textContent = '💭 Leave a comment';
+        heading.textContent = 'Leave a comment';
         form.appendChild(heading);
 
         const privacyNote = document.createElement('p');
@@ -262,7 +262,7 @@
 
         const submit = document.createElement('button');
         submit.type = 'submit';
-        submit.textContent = '✅ Submit comment';
+        submit.textContent = 'Submit comment';
         submit.className = 'button';
         form.appendChild(submit);
 
