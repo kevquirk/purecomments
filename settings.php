@@ -125,9 +125,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($form['admin_username'] === '') {
             $errors[] = 'Admin username is required.';
         }
-        if ($form['privacy_policy_url'] === '') {
-            $errors[] = 'Privacy policy URL is required.';
-        }
         if (!is_valid_timezone_id($form['timezone'])) {
             $errors[] = 'Timezone must be a valid PHP timezone identifier (e.g. UTC, Europe/London).';
         }
@@ -317,7 +314,7 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
             <input id="date_format" name="date_format" required placeholder="Y-m-d H:i" value="<?php echo h($form['date_format']); ?>">
 
             <label for="privacy_policy_url">Privacy policy URL</label>
-            <input id="privacy_policy_url" name="privacy_policy_url" required placeholder="/privacy#commenting" value="<?php echo h($form['privacy_policy_url']); ?>">
+            <input id="privacy_policy_url" name="privacy_policy_url" placeholder="/privacy#commenting" value="<?php echo h($form['privacy_policy_url']); ?>">
 
             <h2>Spam protection</h2>
             <label for="spam_challenge_question">Challenge question</label>

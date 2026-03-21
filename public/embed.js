@@ -194,13 +194,15 @@
         heading.textContent = 'Leave a comment';
         form.appendChild(heading);
 
-        const privacyNote = document.createElement('p');
-        privacyNote.className = 'comment-privacy-link';
-        const privacyAnchor = document.createElement('a');
-        privacyAnchor.href = privacyPolicyUrl !== '' ? privacyPolicyUrl : '#';
-        privacyAnchor.textContent = 'Read the comment privacy notice';
-        privacyNote.appendChild(privacyAnchor);
-        form.appendChild(privacyNote);
+        if (privacyPolicyUrl !== '') {
+            const privacyNote = document.createElement('p');
+            privacyNote.className = 'comment-privacy-link';
+            const privacyAnchor = document.createElement('a');
+            privacyAnchor.href = privacyPolicyUrl;
+            privacyAnchor.textContent = 'Read the comment privacy notice';
+            privacyNote.appendChild(privacyAnchor);
+            form.appendChild(privacyNote);
+        }
 
         const replying = document.createElement('div');
         replying.className = 'replying-to hidden';

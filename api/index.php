@@ -224,7 +224,7 @@ function normalize_website(string $input): ?string
 function get_privacy_policy_url(array $config): string
 {
     $url = trim((string)($config['privacy_policy_url'] ?? ''));
-    return $url !== '' ? $url : '/privacy#commenting';
+    return $url;
 }
 
 function get_spam_challenge_question(array $config): string
