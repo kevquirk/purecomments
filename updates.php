@@ -140,6 +140,7 @@ function core_top_level_paths(): array
         'api',
         'includes',
         'index.php',
+        'lang',
         'login.php',
         'logout.php',
         'public',
