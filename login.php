@@ -13,6 +13,8 @@ start_secure_session();
 
 $config = require __DIR__ . '/config.php';
 require __DIR__ . '/includes/admin_auth.php';
+require_once __DIR__ . '/includes/i18n.php';
+pc_set_language((string)($config['language'] ?? 'en'));
 
 if (is_admin_logged_in($config)) {
     header('Location: ' . pc_url('/', $config), true, 302);
@@ -25,9 +27,9 @@ $setupNotice = '';
 $setupWarning = '';
 
 if (($_GET['setup'] ?? '') === 'complete') {
-    $setupNotice = 'Setup complete. Sign in to start moderating comments.';
+    $setupNotice = t('login.setup_complete');
     if (($_GET['setup_cleanup'] ?? '') === 'failed') {
-        $setupWarning = 'Automatic cleanup failed. Delete or block /setup.php manually.';
+        $setupWarning = t('login.setup_cleanup_failed');
     }
 }
 
@@ -35,31 +37,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim((string)($_POST['username'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
     if ($username === '' || $password === '') {
-        $error = 'Username and password are required.';
+        $error = t('login.err_required');
     } elseif (attempt_admin_login($config, $username, $password)) {
         header('Location: ' . pc_url('/', $config), true, 302);
         exit;
     } else {
         $retryAfter = login_rate_limit_retry_after($config, $username, get_client_ip());
         if ($retryAfter > 0) {
-            $error = 'Too many failed attempts. Try again in ' . $retryAfter . ' seconds.';
+            $error = t('login.err_rate_limited', ['seconds' => $retryAfter]);
         } else {
-            $error = 'Invalid credentials.';
+            $error = t('login.err_invalid');
         }
     }
 }
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="<?php echo htmlspecialchars(_pc_lang_code(), ENT_QUOTES, 'UTF-8'); ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Comments Login</title>
+    <title><?php echo htmlspecialchars(t('login.title'), ENT_QUOTES, 'UTF-8'); ?></title>
     <link rel="stylesheet" href="<?php echo htmlspecialchars(pc_url('/public/style.css', $config) . '?v=' . (string)$styleVersion, ENT_QUOTES, 'UTF-8'); ?>">
 </head>
 <body class="admin">
     <main class="admin-container">
-        <h1>Comments Admin Login</h1>
+        <h1><?php echo htmlspecialchars(t('login.heading'), ENT_QUOTES, 'UTF-8'); ?></h1>
         <?php if ($setupNotice !== '') : ?>
             <p class="notice success"><?php echo htmlspecialchars($setupNotice, ENT_QUOTES, 'UTF-8'); ?></p>
         <?php endif; ?>
@@ -70,15 +72,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <p class="notice error"><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></p>
         <?php endif; ?>
         <form method="post" class="admin-reply">
-            <label for="username">Username</label>
+            <label for="username"><?php echo htmlspecialchars(t('login.username'), ENT_QUOTES, 'UTF-8'); ?></label>
             <input id="username" name="username" autocomplete="username" required value="<?php echo htmlspecialchars((string)($_POST['username'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
 
-            <label for="password">Password</label>
+            <label for="password"><?php echo htmlspecialchars(t('login.password'), ENT_QUOTES, 'UTF-8'); ?></label>
             <input id="password" name="password" type="password" autocomplete="current-password" required>
 
             <button type="submit">
                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo htmlspecialchars(pc_url('/public/icons/sprite.svg', $config), ENT_QUOTES, 'UTF-8'); ?>#icon-login"></use></svg>
-                <span>Sign in</span>
+                <span><?php echo htmlspecialchars(t('login.submit'), ENT_QUOTES, 'UTF-8'); ?></span>
             </button>
         </form>
     </main>

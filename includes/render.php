@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/url.php';
+require_once __DIR__ . '/i18n.php';
 
 function e(string $value): string
 {
@@ -59,14 +60,14 @@ function render_admin_comments_table(
     ?>
     <?php if (empty($primaryComments)) : ?>
         <p class="comments-empty">
-            <?php echo e($context === 'published' ? 'No published comments.' : 'No pending comments.'); ?>
+            <?php echo e(t($context === 'published' ? 'comments.no_published' : 'comments.no_pending')); ?>
         </p>
     <?php else : ?>
         <div class="comments-admin-headings" aria-hidden="true">
-            <span>Author</span>
-            <span>Comment</span>
-            <span>Response To</span>
-            <span>Date</span>
+            <span><?php echo e(t('comments.col_author')); ?></span>
+            <span><?php echo e(t('comments.col_comment')); ?></span>
+            <span><?php echo e(t('comments.col_response_to')); ?></span>
+            <span><?php echo e(t('comments.col_date')); ?></span>
         </div>
         <div class="comments-admin-list">
             <?php foreach ($primaryComments as $index => $comment) : ?>
@@ -97,7 +98,7 @@ function render_admin_comments_table(
                         <span class="comment-summary-preview"><?php echo e(admin_comment_preview_text($comment['content_html'])); ?></span>
                         <span class="comment-summary-response">
                             <?php if ($parent) : ?>
-                                <span>Reply to <?php echo e($parent['name']); ?></span>
+                                <span><?php echo e(t('comments.reply_to', ['name' => $parent['name']])); ?></span>
                             <?php endif; ?>
                             <a href="<?php echo e($postUrl); ?>" target="_blank" rel="noopener">
                                 <?php echo e($postTitle); ?>
@@ -111,7 +112,7 @@ function render_admin_comments_table(
                     <div class="admin-comment-detail">
                         <?php if ($parent) : ?>
                             <div class="admin-comment-parent">
-                                <p><strong>In reply to <?php echo e($parent['name']); ?>:</strong></p>
+                                <p><strong><?php echo e(t('comments.in_reply_to', ['name' => $parent['name']])); ?></strong></p>
                                 <div class="comment-body"><?php echo $parent['content_html']; ?></div>
                             </div>
                         <?php endif; ?>
@@ -139,7 +140,7 @@ function render_admin_comments_table(
                             <?php if ($context === 'pending') : ?>
                                 <button type="submit" name="action" value="publish">
                                     <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-login"></use></svg>
-                                    <span>Publish</span>
+                                    <span><?php echo e(t('comments.publish_btn')); ?></span>
                                 </button>
                             <?php endif; ?>
                             <?php $isThreadRoot = empty($comment['parent_id']); ?>
@@ -148,10 +149,10 @@ function render_admin_comments_table(
                                 name="action"
                                 value="delete"
                                 class="danger"
-                                onclick="return confirm('<?php echo e($isThreadRoot ? 'Delete this thread and all replies?' : 'Delete this comment?'); ?>');"
+                                onclick="return confirm(<?php echo json_encode(t($isThreadRoot ? 'comments.confirm_delete_thread' : 'comments.confirm_delete_comment')); ?>);"
                             >
                                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-delete"></use></svg>
-                                <span><?php echo e($isThreadRoot ? 'Delete thread' : 'Delete'); ?></span>
+                                <span><?php echo e(t($isThreadRoot ? 'comments.delete_thread_btn' : 'comments.delete_btn')); ?></span>
                             </button>
                         </form>
 
@@ -162,12 +163,12 @@ function render_admin_comments_table(
                             <input type="hidden" name="pending_page" value="<?php echo e((string)$pendingPage); ?>">
                             <input type="hidden" name="published_page" value="<?php echo e((string)$publishedPage); ?>">
                             <label>
-                                <span>Reply as author</span>
-                                <textarea name="reply_content" rows="3" placeholder="Write a reply..." class="auto-grow"></textarea>
+                                <span><?php echo e(t('comments.reply_label')); ?></span>
+                                <textarea name="reply_content" rows="3" placeholder="<?php echo e(t('comments.reply_placeholder')); ?>" class="auto-grow"></textarea>
                             </label>
                             <button type="submit" name="action" value="reply">
                                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-reply"></use></svg>
-                                <span>Send reply</span>
+                                <span><?php echo e(t('comments.send_reply_btn')); ?></span>
                             </button>
                         </form>
                     </div>
@@ -240,7 +241,7 @@ function render_admin_author_replies(
                 <div class="admin-author-reply-meta">
                     <strong><?php echo e($reply['name']); ?></strong>
                     <?php if ($isAuthorReply) : ?>
-                        <span class="author-badge">You!</span>
+                        <span class="author-badge"><?php echo e(t('comments.author_badge')); ?></span>
                     <?php endif; ?>
                     <time datetime="<?php echo e(str_replace(' ', 'T', $reply['created_at']) . 'Z'); ?>">
                         <?php echo e(format_admin_datetime($reply['created_at'], $config)); ?>
@@ -258,12 +259,12 @@ function render_admin_author_replies(
                     <?php if ($context === 'pending') : ?>
                         <button type="submit" name="action" value="publish">
                             <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-login"></use></svg>
-                            <span>Publish</span>
+                            <span><?php echo e(t('comments.publish_btn')); ?></span>
                         </button>
                     <?php endif; ?>
-                    <button type="submit" name="action" value="delete" class="danger" onclick="return confirm('Delete this reply?');">
+                    <button type="submit" name="action" value="delete" class="danger" onclick="return confirm(<?php echo json_encode(t('comments.confirm_delete_reply')); ?>);">
                         <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-delete"></use></svg>
-                        <span>Delete reply</span>
+                        <span><?php echo e(t('comments.delete_reply_btn')); ?></span>
                     </button>
                 </form>
 
@@ -275,12 +276,12 @@ function render_admin_author_replies(
                         <input type="hidden" name="pending_page" value="<?php echo e((string)$pendingPage); ?>">
                         <input type="hidden" name="published_page" value="<?php echo e((string)$publishedPage); ?>">
                         <label>
-                            <span>Reply as author</span>
-                            <textarea name="reply_content" rows="2" placeholder="Write a reply..." class="auto-grow"></textarea>
+                            <span><?php echo e(t('comments.reply_label')); ?></span>
+                            <textarea name="reply_content" rows="2" placeholder="<?php echo e(t('comments.reply_placeholder')); ?>" class="auto-grow"></textarea>
                         </label>
                         <button type="submit" name="action" value="reply">
                             <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-reply"></use></svg>
-                            <span>Send reply</span>
+                            <span><?php echo e(t('comments.send_reply_btn')); ?></span>
                         </button>
                     </form>
                 <?php endif; ?>
@@ -349,7 +350,7 @@ function render_admin_pagination(
     ?>
     <nav class="admin-pagination" aria-label="Comments pagination">
         <?php if ($currentPage > 1) : ?>
-            <a href="<?php echo e($buildHref($currentPage - 1)); ?>" class="pagination-link">Previous</a>
+            <a href="<?php echo e($buildHref($currentPage - 1)); ?>" class="pagination-link"><?php echo e(t('comments.prev_btn')); ?></a>
         <?php endif; ?>
 
         <?php for ($page = $windowStart; $page <= $windowEnd; $page++) : ?>
@@ -361,7 +362,7 @@ function render_admin_pagination(
         <?php endfor; ?>
 
         <?php if ($currentPage < $totalPages) : ?>
-            <a href="<?php echo e($buildHref($currentPage + 1)); ?>" class="pagination-link">Next</a>
+            <a href="<?php echo e($buildHref($currentPage + 1)); ?>" class="pagination-link"><?php echo e(t('comments.next_btn')); ?></a>
         <?php endif; ?>
     </nav>
     <?php
@@ -373,7 +374,7 @@ function admin_comment_preview_text(string $html, int $maxLength = 170): string
     $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     $text = trim((string)preg_replace('/\s+/', ' ', $text));
     if ($text === '') {
-        return '[No content]';
+        return t('comments.no_content');
     }
 
     if (function_exists('mb_strlen') && function_exists('mb_substr')) {

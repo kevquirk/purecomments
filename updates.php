@@ -13,6 +13,8 @@ start_secure_session();
 
 $config = require __DIR__ . '/config.php';
 require __DIR__ . '/includes/admin_auth.php';
+require_once __DIR__ . '/includes/i18n.php';
+pc_set_language((string)($config['language'] ?? 'en'));
 
 require_admin_login($config);
 
@@ -33,7 +35,7 @@ function fetch_latest_purecomments_release(): array
     if (function_exists('curl_init')) {
         $ch = curl_init($endpoint);
         if ($ch === false) {
-            return ['ok' => false, 'error' => 'Unable to initialize curl.'];
+            return ['ok' => false, 'error' => t('updates.err_curl_init')];
         }
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -45,7 +47,7 @@ function fetch_latest_purecomments_release(): array
         curl_close($ch);
 
         if (!is_string($raw) || $status < 200 || $status >= 300) {
-            $message = $curlErr !== '' ? $curlErr : ('GitHub request failed (HTTP ' . $status . ').');
+            $message = $curlErr !== '' ? $curlErr : t('updates.err_github_failed', ['status' => $status]);
             return ['ok' => false, 'error' => $message];
         }
     } else {
@@ -59,13 +61,13 @@ function fetch_latest_purecomments_release(): array
 
         $raw = @file_get_contents($endpoint, false, $context);
         if (!is_string($raw)) {
-            return ['ok' => false, 'error' => 'GitHub check failed (network unavailable or allow_url_fopen disabled).'];
+            return ['ok' => false, 'error' => t('updates.err_github_network')];
         }
     }
 
     $json = json_decode($raw, true);
     if (!is_array($json)) {
-        return ['ok' => false, 'error' => 'GitHub returned invalid JSON.'];
+        return ['ok' => false, 'error' => t('updates.err_github_json')];
     }
 
     return [
@@ -207,7 +209,7 @@ function download_url_to_file(string $url, string $destination): ?string
         curl_close($ch);
 
         if ($ok !== true || $status < 200 || $status >= 300) {
-            return $curlErr !== '' ? $curlErr : ('Download failed (HTTP ' . $status . ').');
+            return $curlErr !== '' ? $curlErr : t('updates.err_curl_download', ['status' => $status]);
         }
 
         return null;
@@ -223,7 +225,7 @@ function download_url_to_file(string $url, string $destination): ?string
 
     $raw = @file_get_contents($url, false, $context);
     if (!is_string($raw)) {
-        return 'Download failed (network unavailable or allow_url_fopen disabled).';
+        return t('updates.err_curl_download_net');
     }
 
     if (@file_put_contents($destination, $raw) === false) {
@@ -324,10 +326,10 @@ function remove_non_preserved_htaccess(array $preservedFiles): void
 function build_package_upgrade_plan(string $zipballUrl): array
 {
     if ($zipballUrl === '') {
-        return ['ok' => false, 'error' => 'No zipball URL found for this release.'];
+        return ['ok' => false, 'error' => t('updates.err_no_zipball')];
     }
     if (!class_exists('ZipArchive')) {
-        return ['ok' => false, 'error' => 'ZipArchive extension is not available on this host.'];
+        return ['ok' => false, 'error' => t('updates.err_no_ziparchive')];
     }
 
     $tmpBase = rtrim(sys_get_temp_dir(), '/') . '/purecomments-upgrader-' . bin2hex(random_bytes(6));
@@ -343,11 +345,11 @@ function build_package_upgrade_plan(string $zipballUrl): array
 
         $zip = new ZipArchive();
         if ($zip->open($tmpZip) !== true) {
-            return ['ok' => false, 'error' => 'Unable to open downloaded release zip.'];
+            return ['ok' => false, 'error' => t('updates.err_open_zip')];
         }
         if (!$zip->extractTo($tmpExtract)) {
             $zip->close();
-            return ['ok' => false, 'error' => 'Unable to extract release zip.'];
+            return ['ok' => false, 'error' => t('updates.err_extract_zip')];
         }
         $zip->close();
 
@@ -359,7 +361,7 @@ function build_package_upgrade_plan(string $zipballUrl): array
 
         $sourceFiles = collect_relative_files($sourceRoot);
         if (!$sourceFiles) {
-            return ['ok' => false, 'error' => 'Release archive did not contain readable files.'];
+            return ['ok' => false, 'error' => t('updates.err_no_files')];
         }
 
         $preserveTop = preserved_top_level_paths();
@@ -562,33 +564,33 @@ function format_backup_timestamp(string $backupName): string
 function restore_named_backup(string $backupName): array
 {
     if ($backupName === '' || $backupName !== basename($backupName)) {
-        return ['ok' => false, 'error' => 'Invalid backup name.'];
+        return ['ok' => false, 'error' => t('updates.err_invalid_backup')];
     }
 
     $backupBase = PURECOMMENTS_BASE_PATH . '/backup';
     $backupBaseReal = realpath($backupBase);
     if ($backupBaseReal === false) {
-        return ['ok' => false, 'error' => 'Backup directory does not exist.'];
+        return ['ok' => false, 'error' => t('updates.err_backup_dir')];
     }
 
     $backupPath = $backupBaseReal . '/' . $backupName;
     $backupPathReal = realpath($backupPath);
     if ($backupPathReal === false || !is_dir($backupPathReal)) {
-        return ['ok' => false, 'error' => 'Selected backup was not found.'];
+        return ['ok' => false, 'error' => t('updates.err_backup_not_found')];
     }
     if (!str_starts_with($backupPathReal, $backupBaseReal . '/')) {
-        return ['ok' => false, 'error' => 'Invalid backup path.'];
+        return ['ok' => false, 'error' => t('updates.err_backup_path')];
     }
 
     try {
         restore_core_paths_from_backup($backupPathReal);
     } catch (Throwable $e) {
-        return ['ok' => false, 'error' => 'Restore failed: ' . $e->getMessage()];
+        return ['ok' => false, 'error' => t('updates.err_restore_failed', ['error' => $e->getMessage()])];
     }
 
     return [
         'ok' => true,
-        'message' => 'Backup restored successfully.',
+        'message' => t('updates.msg_backup_restored'),
         'backup_path' => $backupPathReal,
     ];
 }
@@ -596,33 +598,33 @@ function restore_named_backup(string $backupName): array
 function delete_named_backup(string $backupName): array
 {
     if ($backupName === '' || $backupName !== basename($backupName)) {
-        return ['ok' => false, 'error' => 'Invalid backup name.'];
+        return ['ok' => false, 'error' => t('updates.err_invalid_backup')];
     }
 
     $backupBase = PURECOMMENTS_BASE_PATH . '/backup';
     $backupBaseReal = realpath($backupBase);
     if ($backupBaseReal === false) {
-        return ['ok' => false, 'error' => 'Backup directory does not exist.'];
+        return ['ok' => false, 'error' => t('updates.err_backup_dir')];
     }
 
     $backupPath = $backupBaseReal . '/' . $backupName;
     $backupPathReal = realpath($backupPath);
     if ($backupPathReal === false || !is_dir($backupPathReal)) {
-        return ['ok' => false, 'error' => 'Selected backup was not found.'];
+        return ['ok' => false, 'error' => t('updates.err_backup_not_found')];
     }
     if (!str_starts_with($backupPathReal, $backupBaseReal . '/')) {
-        return ['ok' => false, 'error' => 'Invalid backup path.'];
+        return ['ok' => false, 'error' => t('updates.err_backup_path')];
     }
 
     try {
         remove_directory_recursive($backupPathReal);
     } catch (Throwable $e) {
-        return ['ok' => false, 'error' => 'Delete failed: ' . $e->getMessage()];
+        return ['ok' => false, 'error' => t('updates.err_delete_failed', ['error' => $e->getMessage()])];
     }
 
     return [
         'ok' => true,
-        'message' => 'Backup deleted successfully.',
+        'message' => t('updates.msg_backup_deleted'),
     ];
 }
 
@@ -641,7 +643,7 @@ function apply_release_update(string $zipballUrl, string $releaseTag = ''): arra
     $backupBase = PURECOMMENTS_BASE_PATH . '/backup';
 
     if (!is_dir($backupBase) && !@mkdir($backupBase, 0755, true) && !is_dir($backupBase)) {
-        return ['ok' => false, 'error' => 'Unable to create local backup directory at /backup.'];
+        return ['ok' => false, 'error' => t('updates.err_backup_create')];
     }
 
     $versionRaw = detect_current_purecomments_version();
@@ -662,11 +664,11 @@ function apply_release_update(string $zipballUrl, string $releaseTag = ''): arra
 
         $zip = new ZipArchive();
         if ($zip->open($tmpZip) !== true) {
-            return ['ok' => false, 'error' => 'Unable to open downloaded release zip.'];
+            return ['ok' => false, 'error' => t('updates.err_open_zip')];
         }
         if (!$zip->extractTo($tmpExtract)) {
             $zip->close();
-            return ['ok' => false, 'error' => 'Unable to extract release zip.'];
+            return ['ok' => false, 'error' => t('updates.err_extract_zip')];
         }
         $zip->close();
 
@@ -677,7 +679,7 @@ function apply_release_update(string $zipballUrl, string $releaseTag = ''): arra
         }
 
         if (!is_file($sourceRoot . '/api/index.php') || !is_file($sourceRoot . '/public/embed.js')) {
-            return ['ok' => false, 'error' => 'Release archive does not look like a valid Pure Comments package.'];
+            return ['ok' => false, 'error' => t('updates.err_invalid_package')];
         }
 
         $preservedHtaccessFiles = collect_existing_htaccess_files();
@@ -714,7 +716,7 @@ function apply_release_update(string $zipballUrl, string $releaseTag = ''): arra
 
         return [
             'ok' => true,
-            'message' => 'Update applied successfully.',
+            'message' => t('updates.msg_update_applied'),
             'backup_path' => $tmpBackup,
         ];
     } catch (Throwable $e) {
@@ -725,13 +727,13 @@ function apply_release_update(string $zipballUrl, string $releaseTag = ''): arra
         } catch (Throwable $restoreError) {
             return [
                 'ok' => false,
-                'error' => 'Update failed and rollback also failed: ' . $restoreError->getMessage(),
+                'error' => t('updates.err_update_rollback', ['error' => $restoreError->getMessage()]),
             ];
         }
 
         return [
             'ok' => false,
-            'error' => 'Update failed and was rolled back: ' . $e->getMessage(),
+            'error' => t('updates.err_update_rolled_back', ['error' => $e->getMessage()]),
         ];
     } finally {
         @unlink($tmpZip);
@@ -759,7 +761,7 @@ if (isset($_GET['package_plan'])) {
             $packagePlan = [
                 'ok' => true,
                 'already_latest' => true,
-                'message' => 'You are already on the latest release (' . $latestTag . ').',
+                'message' => t('updates.msg_already_latest', ['version' => $latestTag]),
             ];
         } else {
             $packagePlan = build_package_upgrade_plan((string) ($latestForPackage['zipball_url'] ?? ''));
@@ -774,7 +776,7 @@ $applyResult = null;
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $token = (string) ($_POST['csrf_token'] ?? '');
     if (!hash_equals((string) $_SESSION['csrf_token'], $token)) {
-        $applyResult = ['ok' => false, 'error' => 'Invalid CSRF token.'];
+        $applyResult = ['ok' => false, 'error' => t('updates.err_csrf')];
     } elseif (isset($_POST['apply_update'])) {
         $latestForApply = fetch_latest_purecomments_release();
         if (!($latestForApply['ok'] ?? false)) {
@@ -796,13 +798,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $backupName = trim((string) ($_POST['backup_name'] ?? ''));
         $applyResult = restore_named_backup($backupName);
         if (!($applyResult['ok'] ?? false) && $backupName === '') {
-            $applyResult = ['ok' => false, 'error' => 'Please choose a backup to restore.'];
+            $applyResult = ['ok' => false, 'error' => t('updates.err_please_choose_restore')];
         }
     } elseif (isset($_POST['delete_backup'])) {
         $backupName = trim((string) ($_POST['backup_name'] ?? ''));
         $applyResult = delete_named_backup($backupName);
         if (!($applyResult['ok'] ?? false) && $backupName === '') {
-            $applyResult = ['ok' => false, 'error' => 'Please choose a backup to delete.'];
+            $applyResult = ['ok' => false, 'error' => t('updates.err_please_choose_delete')];
         }
     }
 }
@@ -814,11 +816,11 @@ $latestBackupTimestamp = $latestBackup !== '' ? format_backup_timestamp($latestB
 $styleVersion = filemtime(__DIR__ . '/public/style.css');
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="<?php echo h(_pc_lang_code()); ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Comments Updates</title>
+    <title><?php echo h(t('updates.title')); ?></title>
     <link rel="stylesheet" href="<?php echo h(pc_url('/public/style.css', $config)); ?>?v=<?php echo h((string)$styleVersion); ?>">
 </head>
 <body class="admin">
@@ -826,38 +828,38 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
         <div class="admin-top-actions">
             <a class="button" href="<?php echo h(pc_url('/settings.php', $config)); ?>">
                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-back"></use></svg>
-                <span>Back to settings</span>
+                <span><?php echo h(t('updates.back_btn')); ?></span>
             </a>
             <a class="button danger" href="<?php echo h(pc_url('/logout.php', $config)); ?>">
                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-logout"></use></svg>
-                <span>Log out</span>
+                <span><?php echo h(t('updates.logout_btn')); ?></span>
             </a>
         </div>
 
-        <h1>Updates</h1>
+        <h1><?php echo h(t('updates.heading')); ?></h1>
 
         <section class="admin-section">
-            <h2>Version check</h2>
-            <p><strong>Current version:</strong> <?php echo h($currentVersionDisplay); ?></p>
+            <h2><?php echo h(t('updates.section_version')); ?></h2>
+            <p><strong><?php echo h(t('updates.current_version')); ?></strong> <?php echo h($currentVersionDisplay); ?></p>
             <?php if ($latestBackup !== '') : ?>
-                <p><strong>Last backup:</strong>
+                <p><strong><?php echo h(t('updates.last_backup')); ?></strong>
                     <?php if ($latestBackupTimestamp !== '') : ?>
                         <?php echo h($latestBackupTimestamp); ?>
                     <?php else : ?>
-                        Unknown time
+                        <?php echo h(t('updates.unknown_time')); ?>
                     <?php endif; ?>
                     (<code><?php echo h($latestBackup); ?></code>)
                 </p>
             <?php endif; ?>
-            <p><strong>Repository:</strong> <a href="https://github.com/kevquirk/purecomments" target="_blank" rel="noopener noreferrer">github.com/kevquirk/purecomments</a></p>
+            <p><strong><?php echo h(t('updates.repository')); ?></strong> <a href="https://github.com/kevquirk/purecomments" target="_blank" rel="noopener noreferrer">github.com/kevquirk/purecomments</a></p>
             <p>
                 <a class="button" href="<?php echo h(pc_url('/updates.php', $config)); ?>?check=1">
                     <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-upgrade"></use></svg>
-                    Check latest release
+                    <?php echo h(t('updates.check_btn')); ?>
                 </a>
                 <a class="button" href="<?php echo h(pc_url('/updates.php', $config)); ?>?package_plan=1">
                     <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-upgrade"></use></svg>
-                    Inspect release package
+                    <?php echo h(t('updates.inspect_btn')); ?>
                 </a>
             </p>
 
@@ -866,38 +868,38 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
             <?php endif; ?>
 
             <?php if ($latest !== null && ($latest['ok'] ?? false)) : ?>
-                <p><strong>Latest release:</strong> <?php echo h($latest['tag'] !== '' ? (string) $latest['tag'] : (string) ($latest['name'] ?? 'Unknown')); ?></p>
+                <p><strong><?php echo h(t('updates.latest_release')); ?></strong> <?php echo h($latest['tag'] !== '' ? (string) $latest['tag'] : (string) ($latest['name'] ?? 'Unknown')); ?></p>
                 <?php if (($latest['published_at'] ?? '') !== '') : ?>
-                    <p><strong>Published:</strong> <?php echo h((string) date('Y-m-d', strtotime((string) $latest['published_at']))); ?></p>
+                    <p><strong><?php echo h(t('updates.published_label')); ?></strong> <?php echo h((string) date('Y-m-d', strtotime((string) $latest['published_at']))); ?></p>
                 <?php endif; ?>
-                <p><a href="<?php echo h((string) ($latest['url'] ?? 'https://github.com/kevquirk/purecomments/releases')); ?>" target="_blank" rel="noopener noreferrer">View release notes</a></p>
+                <p><a href="<?php echo h((string) ($latest['url'] ?? 'https://github.com/kevquirk/purecomments/releases')); ?>" target="_blank" rel="noopener noreferrer"><?php echo h(t('updates.release_notes')); ?></a></p>
             <?php endif; ?>
         </section>
 
         <?php if ($packagePlanError !== '') : ?>
             <section class="admin-section">
-                <h2>Release package inspection</h2>
+                <h2><?php echo h(t('updates.section_package')); ?></h2>
                 <p class="notice error"><?php echo h($packagePlanError); ?></p>
             </section>
         <?php endif; ?>
 
         <?php if ($packagePlan !== null && ($packagePlan['ok'] ?? false)) : ?>
             <section class="admin-section">
-                <h2>Release package inspection</h2>
+                <h2><?php echo h(t('updates.section_package')); ?></h2>
                 <?php if (!empty($packagePlan['already_latest'])) : ?>
-                    <p><?php echo h((string) ($packagePlan['message'] ?? 'You are already on the latest release.')); ?></p>
+                    <p><?php echo h((string) ($packagePlan['message'] ?? t('updates.msg_already_latest', ['version' => '']))); ?></p>
                 <?php else : ?>
-                    <p><strong>Planned file actions:</strong></p>
+                    <p><strong><?php echo h(t('updates.planned_actions')); ?></strong></p>
                     <ul>
-                        <li><strong>Add:</strong> <?php echo h((string) ($packagePlan['counts']['add'] ?? 0)); ?></li>
-                        <li><strong>Replace:</strong> <?php echo h((string) ($packagePlan['counts']['replace'] ?? 0)); ?></li>
-                        <li><strong>Unchanged:</strong> <?php echo h((string) ($packagePlan['counts']['unchanged'] ?? 0)); ?></li>
-                        <li><strong>Preserved files (<code>/config.php</code>, <code>/db</code>, <code>/setup.php</code>, all <code>.htaccess</code> files):</strong> <?php echo h((string) ($packagePlan['counts']['skip'] ?? 0)); ?></li>
-                        <li><strong>Local files not in upstream release (will be deleted):</strong> <?php echo h((string) ($packagePlan['counts']['local_only'] ?? 0)); ?></li>
+                        <li><strong><?php echo h(t('updates.count_add')); ?></strong> <?php echo h((string) ($packagePlan['counts']['add'] ?? 0)); ?></li>
+                        <li><strong><?php echo h(t('updates.count_replace')); ?></strong> <?php echo h((string) ($packagePlan['counts']['replace'] ?? 0)); ?></li>
+                        <li><strong><?php echo h(t('updates.count_unchanged')); ?></strong> <?php echo h((string) ($packagePlan['counts']['unchanged'] ?? 0)); ?></li>
+                        <li><strong><?php echo h(t('updates.count_preserved')); ?></strong> <?php echo h((string) ($packagePlan['counts']['skip'] ?? 0)); ?></li>
+                        <li><strong><?php echo h(t('updates.count_local_only')); ?></strong> <?php echo h((string) ($packagePlan['counts']['local_only'] ?? 0)); ?></li>
                     </ul>
 
                     <?php if (!empty($packagePlan['will_add'])) : ?>
-                        <p><strong>Will add:</strong></p>
+                        <p><strong><?php echo h(t('updates.will_add')); ?></strong></p>
                         <ul>
                             <?php foreach ($packagePlan['will_add'] as $path) : ?>
                                 <li><code><?php echo h((string) $path); ?></code></li>
@@ -906,7 +908,7 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
                     <?php endif; ?>
 
                     <?php if (!empty($packagePlan['will_replace'])) : ?>
-                        <p><strong>Will replace:</strong></p>
+                        <p><strong><?php echo h(t('updates.will_replace')); ?></strong></p>
                         <ul>
                             <?php foreach ($packagePlan['will_replace'] as $path) : ?>
                                 <li><code><?php echo h((string) $path); ?></code></li>
@@ -915,7 +917,7 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
                     <?php endif; ?>
 
                     <?php if (!empty($packagePlan['local_only'])) : ?>
-                        <p><strong>Local files not in upstream release (will be deleted):</strong></p>
+                        <p><strong><?php echo h(t('updates.local_only_files')); ?></strong></p>
                         <ul>
                             <?php foreach ($packagePlan['local_only'] as $path) : ?>
                                 <li><code><?php echo h((string) $path); ?></code></li>
@@ -923,11 +925,11 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
                         </ul>
                     <?php endif; ?>
 
-                    <form method="post" action="<?php echo h(pc_url('/updates.php', $config)); ?>" onsubmit="return confirm('Apply latest update now? This will replace core files and keep /config.php, /db, /setup.php, and all .htaccess files.');">
+                    <form method="post" action="<?php echo h(pc_url('/updates.php', $config)); ?>" onsubmit="return confirm(<?php echo json_encode(t('updates.confirm_apply')); ?>);">
                         <input type="hidden" name="csrf_token" value="<?php echo h((string) $_SESSION['csrf_token']); ?>">
                         <button class="button" type="submit" name="apply_update" value="1">
                             <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-upgrade"></use></svg>
-                            Apply latest update
+                            <?php echo h(t('updates.apply_btn')); ?>
                         </button>
                     </form>
                 <?php endif; ?>
@@ -936,24 +938,24 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
 
         <?php if (!empty($availableBackups)) : ?>
             <section class="admin-section">
-                <h2>Backup restore</h2>
-                <p>Backups in <code>/backup</code> are excluded from updates and can be used for rollback.</p>
+                <h2><?php echo h(t('updates.section_backup')); ?></h2>
+                <p><?php echo h(t('updates.backup_note')); ?></p>
                 <form method="post" action="<?php echo h(pc_url('/updates.php', $config)); ?>" class="admin-form">
                     <input type="hidden" name="csrf_token" value="<?php echo h((string) $_SESSION['csrf_token']); ?>">
-                    <label for="backup_name">Available backups</label>
+                    <label for="backup_name"><?php echo h(t('updates.available_backups')); ?></label>
                     <select id="backup_name" name="backup_name" required>
                         <?php foreach ($availableBackups as $backupName) : ?>
                             <option value="<?php echo h((string) $backupName); ?>"><?php echo h((string) $backupName); ?></option>
                         <?php endforeach; ?>
                     </select>
                     <div class="admin-action">
-                        <button class="button" type="submit" name="restore_backup" value="1" onclick="return confirm('Restore this backup now? Current core files will be replaced.');">
+                        <button class="button" type="submit" name="restore_backup" value="1" onclick="return confirm(<?php echo json_encode(t('updates.confirm_restore')); ?>);">
                             <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-upgrade"></use></svg>
-                            Restore selected backup
+                            <?php echo h(t('updates.restore_btn')); ?>
                         </button>
-                        <button class="button danger" type="submit" name="delete_backup" value="1" onclick="return confirm('Delete this backup permanently? This cannot be undone.');">
+                        <button class="button danger" type="submit" name="delete_backup" value="1" onclick="return confirm(<?php echo json_encode(t('updates.confirm_delete_backup')); ?>);">
                             <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-delete"></use></svg>
-                            Delete selected backup
+                            <?php echo h(t('updates.delete_backup_btn')); ?>
                         </button>
                     </div>
                 </form>
@@ -962,13 +964,13 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
 
         <?php if ($applyResult !== null) : ?>
             <section class="admin-section">
-                <h2>Apply result</h2>
+                <h2><?php echo h(t('updates.section_result')); ?></h2>
                 <?php if (!($applyResult['ok'] ?? false)) : ?>
-                    <p class="notice error"><?php echo h((string) ($applyResult['error'] ?? 'Update failed.')); ?></p>
+                    <p class="notice error"><?php echo h((string) ($applyResult['error'] ?? '')); ?></p>
                 <?php else : ?>
-                    <p class="notice success"><?php echo h((string) ($applyResult['message'] ?? 'Update completed.')); ?></p>
+                    <p class="notice success"><?php echo h((string) ($applyResult['message'] ?? '')); ?></p>
                     <?php if (!empty($applyResult['backup_path'])) : ?>
-                        <p><strong>Backup path:</strong> <code><?php echo h((string) $applyResult['backup_path']); ?></code></p>
+                        <p><strong><?php echo h(t('updates.backup_path')); ?></strong> <code><?php echo h((string) $applyResult['backup_path']); ?></code></p>
                     <?php endif; ?>
                 <?php endif; ?>
             </section>

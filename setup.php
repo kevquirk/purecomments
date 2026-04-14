@@ -2,11 +2,15 @@
 declare(strict_types=1);
 
 require __DIR__ . '/includes/url.php';
+require_once __DIR__ . '/includes/i18n.php';
+require __DIR__ . '/includes/config_builder.php';
 
 $configPath = __DIR__ . '/config.php';
-require __DIR__ . '/includes/config_builder.php';
 $errors = [];
 $saved = false;
+
+$previewLang = trim((string)($_GET['lang'] ?? default_comments_language()));
+pc_set_language($previewLang);
 
 if (is_file($configPath)) {
     header('Location: ' . pc_url('/'), true, 302);
@@ -14,6 +18,7 @@ if (is_file($configPath)) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $language = trim((string)($_POST['language'] ?? $previewLang));
     $adminUsername = trim((string)($_POST['admin_username'] ?? ''));
     $adminPassword = (string)($_POST['admin_password'] ?? '');
     $adminPasswordConfirm = (string)($_POST['admin_password_confirm'] ?? '');
@@ -64,50 +69,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($adminUsername === '') {
-        $errors[] = 'Admin username is required.';
+        $errors[] = t('setup.err_username');
     }
     if (strlen($adminPassword) < 10) {
-        $errors[] = 'Admin password must be at least 10 characters.';
+        $errors[] = t('setup.err_password_length');
     }
     if (!hash_equals($adminPassword, $adminPasswordConfirm)) {
-        $errors[] = 'Admin passwords do not match.';
+        $errors[] = t('setup.err_passwords_match');
     }
     if ($spamChallengeQuestion === '') {
-        $errors[] = 'Spam challenge question is required.';
+        $errors[] = t('setup.err_challenge_question');
     }
     if ($spamChallengeAnswer === '') {
-        $errors[] = 'Spam challenge answer is required.';
+        $errors[] = t('setup.err_challenge_answer');
     }
     if ($authorName === '') {
-        $errors[] = 'Author name is required.';
+        $errors[] = t('setup.err_author_name');
     }
     if (!filter_var($authorEmail, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'Author email must be valid.';
+        $errors[] = t('setup.err_author_email');
     }
     if (!filter_var($notifyEmail, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'Notification email must be valid.';
+        $errors[] = t('setup.err_notify_email');
     }
     if ($postBaseUrl === '' || !filter_var($postBaseUrl, FILTER_VALIDATE_URL)) {
-        $errors[] = 'Post base URL must be valid (e.g. https://example.com/blog).';
+        $errors[] = t('setup.err_post_base_url');
     }
     if ($moderationBaseUrl === '' || !filter_var($moderationBaseUrl, FILTER_VALIDATE_URL)) {
-        $errors[] = 'Moderation base URL must be valid (e.g. https://comments.example.com).';
+        $errors[] = t('setup.err_service_url');
     }
     if (!is_valid_timezone_id($timezone)) {
-        $errors[] = 'Timezone must be a valid PHP timezone identifier (e.g. UTC, Europe/London).';
+        $errors[] = t('setup.err_timezone');
     }
     if ($dateFormat === '') {
-        $errors[] = 'Date format is required.';
+        $errors[] = t('setup.err_date_format');
     }
     if ($emailProvider === 'smtp') {
         if ($smtpHost === '') {
-            $errors[] = 'SMTP host is required.';
+            $errors[] = t('setup.err_smtp_host');
         }
         if ($smtpPort === '' || !ctype_digit($smtpPort)) {
-            $errors[] = 'SMTP port must be a number.';
+            $errors[] = t('setup.err_smtp_port');
         }
         if (!in_array($smtpEnc, ['tls', 'ssl', ''], true)) {
-            $errors[] = 'SMTP encryption must be tls, ssl, or none.';
+            $errors[] = t('setup.err_smtp_enc');
         }
     }
 
@@ -115,6 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errors)) {
         $configPhp = build_config_php([
+            'language' => $language,
             'admin_username' => $adminUsername,
             'admin_password_hash' => password_hash($adminPassword, PASSWORD_DEFAULT),
             'sodium_key_hex' => $sodiumHex,
@@ -143,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ]);
 
         if (@file_put_contents($configPath, $configPhp, LOCK_EX) === false) {
-            $errors[] = 'Unable to write config.php. Check filesystem permissions.';
+            $errors[] = t('setup.err_save_config');
         } else {
             /** @var array $config */
             $config = require $configPath;
@@ -170,16 +176,16 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Pure Comments Setup</title>
+    <title><?php echo h(t('setup.title')); ?></title>
     <link rel="stylesheet" href="<?php echo h(pc_url('/public/style.css')); ?>?v=<?php echo h((string)$styleVersion); ?>">
 </head>
 <body class="admin">
     <main class="admin-container">
-        <h1>Pure Comments Setup</h1>
+        <h1><?php echo h(t('setup.heading')); ?></h1>
 
         <?php if (!empty($errors)) : ?>
             <div class="notice error">
-                <strong>Setup errors:</strong>
+                <strong><?php echo h(t('setup.errors_heading')); ?></strong>
                 <ul>
                     <?php foreach ($errors as $error) : ?>
                         <li><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?></li>
@@ -187,39 +193,48 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
                 </ul>
             </div>
         <?php endif; ?>
-
+        
         <form method="post" class="admin-form">
-            <h2>Admin</h2>
-            <label for="admin_username">Admin username</label>
-            <input id="admin_username" name="admin_username" required value="<?php echo h($_POST['admin_username'] ?? ''); ?>">
-
-            <label for="admin_password">Admin password</label>
-            <input id="admin_password" name="admin_password" type="password" minlength="10" autocomplete="new-password" required>
-
-            <label for="admin_password_confirm">Confirm admin password</label>
-            <input id="admin_password_confirm" name="admin_password_confirm" type="password" minlength="10" autocomplete="new-password" required>
-
-            <h2>Site</h2>
-            <label for="post_base_url">Post base URL</label>
-            <input id="post_base_url" name="post_base_url" required placeholder="https://example.com/blog" value="<?php echo h($_POST['post_base_url'] ?? ''); ?>">
-
-            <label for="moderation_base_url">Comments service URL</label>
-            <input id="moderation_base_url" name="moderation_base_url" required placeholder="https://comments.example.com" value="<?php echo h($_POST['moderation_base_url'] ?? ''); ?>">
+            <h2><?php echo h(t('setup.section_language')); ?></h2>
+            <?php $availableLangs = pc_available_languages(); ?>
+            <label for="language"><?php echo h(t('settings.field_language')); ?></label>
+            <select id="language" name="language" onchange="window.location.href='?lang='+this.value">
+                <?php foreach ($availableLangs as $langCode => $langName): ?>
+                    <option value="<?php echo h($langCode); ?>" <?php echo $previewLang === $langCode ? 'selected' : ''; ?>><?php echo h($langName); ?></option>
+                <?php endforeach; ?>
+            </select>
 
             <label for="timezone">
-                Timezone
+                <?php echo h(t('setup.field_timezone')); ?>
                 <small>(<a href="https://www.php.net/manual/en/timezones.php" target="_blank" rel="noopener noreferrer">PHP timezone list</a>)</small>
             </label>
             <input id="timezone" name="timezone" required placeholder="UTC" value="<?php echo h($_POST['timezone'] ?? default_comments_timezone()); ?>">
 
+            <h2><?php echo h(t('setup.section_admin')); ?></h2>
+            <label for="admin_username"><?php echo h(t('setup.field_username')); ?></label>
+            <input id="admin_username" name="admin_username" required value="<?php echo h($_POST['admin_username'] ?? ''); ?>">
+
+            <label for="admin_password"><?php echo h(t('setup.field_password')); ?></label>
+            <input id="admin_password" name="admin_password" type="password" minlength="10" autocomplete="new-password" required>
+
+            <label for="admin_password_confirm"><?php echo h(t('setup.field_password_confirm')); ?></label>
+            <input id="admin_password_confirm" name="admin_password_confirm" type="password" minlength="10" autocomplete="new-password" required>
+
+            <h2><?php echo h(t('setup.section_site')); ?></h2>
+            <label for="post_base_url"><?php echo h(t('setup.field_post_base_url')); ?></label>
+            <input id="post_base_url" name="post_base_url" required placeholder="https://example.com/blog" value="<?php echo h($_POST['post_base_url'] ?? ''); ?>">
+
+            <label for="moderation_base_url"><?php echo h(t('setup.field_service_url')); ?></label>
+            <input id="moderation_base_url" name="moderation_base_url" required placeholder="https://comments.example.com" value="<?php echo h($_POST['moderation_base_url'] ?? ''); ?>">
+
             <label for="date_format">
-                Date format
+                <?php echo h(t('setup.field_date_format')); ?>
                 <small>(<a href="https://www.php.net/manual/en/datetime.format.php" target="_blank" rel="noopener noreferrer">PHP date format docs</a>)</small>
             </label>
             <input id="date_format" name="date_format" required placeholder="Y-m-d H:i" value="<?php echo h($_POST['date_format'] ?? default_comments_date_format()); ?>">
 
-            <h2>Spam protection</h2>
-            <label for="spam_challenge_question">Challenge question</label>
+            <h2><?php echo h(t('setup.section_spam')); ?></h2>
+            <label for="spam_challenge_question"><?php echo h(t('setup.field_challenge_question')); ?></label>
             <input
                 id="spam_challenge_question"
                 name="spam_challenge_question"
@@ -228,7 +243,7 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
                 value="<?php echo h($_POST['spam_challenge_question'] ?? ''); ?>"
             >
 
-            <label for="spam_challenge_answer">Challenge answer</label>
+            <label for="spam_challenge_answer"><?php echo h(t('setup.field_challenge_answer')); ?></label>
             <input
                 id="spam_challenge_answer"
                 name="spam_challenge_answer"
@@ -237,7 +252,7 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
                 value="<?php echo h($_POST['spam_challenge_answer'] ?? ''); ?>"
             >
 
-            <label for="spam_challenge_placeholder">Challenge placeholder (optional)</label>
+            <label for="spam_challenge_placeholder"><?php echo h(t('setup.field_challenge_ph')); ?></label>
             <input
                 id="spam_challenge_placeholder"
                 name="spam_challenge_placeholder"
@@ -245,65 +260,65 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
                 value="<?php echo h($_POST['spam_challenge_placeholder'] ?? ''); ?>"
             >
 
-            <h2>Author</h2>
-            <label for="author_name">Author name</label>
+            <h2><?php echo h(t('setup.section_author')); ?></h2>
+            <label for="author_name"><?php echo h(t('setup.field_author_name')); ?></label>
             <input id="author_name" name="author_name" required value="<?php echo h($_POST['author_name'] ?? ''); ?>">
 
-            <label for="author_email">Author email</label>
+            <label for="author_email"><?php echo h(t('setup.field_author_email')); ?></label>
             <input id="author_email" name="author_email" type="email" required value="<?php echo h($_POST['author_email'] ?? ''); ?>">
 
-            <h2>Email notifications (optional)</h2>
-            <label for="email_provider">Email provider</label>
+            <h2><?php echo h(t('setup.section_email')); ?></h2>
+            <label for="email_provider"><?php echo h(t('setup.field_email_provider')); ?></label>
             <select id="email_provider" name="email_provider">
-                <option value="">None</option>
-                <option value="ses" <?php echo ($_POST['email_provider'] ?? '') === 'ses' ? 'selected' : ''; ?>>Amazon SES</option>
-                <option value="smtp" <?php echo ($_POST['email_provider'] ?? '') === 'smtp' ? 'selected' : ''; ?>>SMTP</option>
+                <option value=""><?php echo h(t('setup.email_none')); ?></option>
+                <option value="ses" <?php echo ($_POST['email_provider'] ?? '') === 'ses' ? 'selected' : ''; ?>><?php echo h(t('setup.email_ses')); ?></option>
+                <option value="smtp" <?php echo ($_POST['email_provider'] ?? '') === 'smtp' ? 'selected' : ''; ?>><?php echo h(t('setup.email_smtp')); ?></option>
             </select>
 
-            <label for="notify_email">Moderation notify email</label>
+            <label for="notify_email"><?php echo h(t('setup.field_notify_email')); ?></label>
             <input id="notify_email" name="notify_email" type="email" value="<?php echo h($_POST['notify_email'] ?? ''); ?>">
 
             <div id="ses-settings" class="admin-form-section" hidden>
-                <label for="aws_region">AWS region</label>
+                <label for="aws_region"><?php echo h(t('settings.field_aws_region')); ?></label>
                 <input id="aws_region" name="aws_region" placeholder="eu-west-1" value="<?php echo h($_POST['aws_region'] ?? ''); ?>">
 
-                <label for="aws_access_key">AWS access key</label>
+                <label for="aws_access_key"><?php echo h(t('settings.field_aws_access_key')); ?></label>
                 <input id="aws_access_key" name="aws_access_key" value="<?php echo h($_POST['aws_access_key'] ?? ''); ?>">
 
-                <label for="aws_secret_key">AWS secret key</label>
+                <label for="aws_secret_key"><?php echo h(t('settings.field_aws_secret_key')); ?></label>
                 <input id="aws_secret_key" name="aws_secret_key" value="<?php echo h($_POST['aws_secret_key'] ?? ''); ?>">
 
-                <label for="source_email">Source email address</label>
+                <label for="source_email"><?php echo h(t('settings.field_source_email')); ?></label>
                 <input id="source_email" name="source_email" type="email" value="<?php echo h($_POST['source_email'] ?? ''); ?>">
 
-                <label for="source_name">Source name</label>
+                <label for="source_name"><?php echo h(t('settings.field_source_name')); ?></label>
                 <input id="source_name" name="source_name" value="<?php echo h($_POST['source_name'] ?? ''); ?>">
             </div>
 
             <div id="smtp-settings" class="admin-form-section" hidden>
-                <label for="smtp_host">SMTP host</label>
+                <label for="smtp_host"><?php echo h(t('settings.field_smtp_host')); ?></label>
                 <input id="smtp_host" name="smtp_host" placeholder="smtp.example.com" value="<?php echo h($_POST['smtp_host'] ?? ''); ?>">
 
-                <label for="smtp_port">SMTP port</label>
+                <label for="smtp_port"><?php echo h(t('settings.field_smtp_port')); ?></label>
                 <input id="smtp_port" name="smtp_port" type="number" min="1" max="65535" placeholder="587" value="<?php echo h($_POST['smtp_port'] ?? '587'); ?>">
 
-                <label for="smtp_enc">Encryption</label>
+                <label for="smtp_enc"><?php echo h(t('settings.field_smtp_enc')); ?></label>
                 <select id="smtp_enc" name="smtp_enc">
-                    <option value="tls" <?php echo ($_POST['smtp_enc'] ?? 'tls') === 'tls' ? 'selected' : ''; ?>>STARTTLS (port 587)</option>
-                    <option value="ssl" <?php echo ($_POST['smtp_enc'] ?? '') === 'ssl' ? 'selected' : ''; ?>>SSL/TLS (port 465)</option>
-                    <option value="" <?php echo ($_POST['smtp_enc'] ?? '') === '' ? 'selected' : ''; ?>>None (port 25)</option>
+                    <option value="tls" <?php echo ($_POST['smtp_enc'] ?? 'tls') === 'tls' ? 'selected' : ''; ?>><?php echo h(t('setup.smtp_enc_tls')); ?></option>
+                    <option value="ssl" <?php echo ($_POST['smtp_enc'] ?? '') === 'ssl' ? 'selected' : ''; ?>><?php echo h(t('setup.smtp_enc_ssl')); ?></option>
+                    <option value="" <?php echo ($_POST['smtp_enc'] ?? '') === '' ? 'selected' : ''; ?>><?php echo h(t('setup.smtp_enc_none')); ?></option>
                 </select>
 
-                <label for="smtp_user">SMTP username</label>
+                <label for="smtp_user"><?php echo h(t('settings.field_smtp_user')); ?></label>
                 <input id="smtp_user" name="smtp_user" autocomplete="off" value="<?php echo h($_POST['smtp_user'] ?? ''); ?>">
 
-                <label for="smtp_pwd">SMTP password</label>
+                <label for="smtp_pwd"><?php echo h(t('settings.field_smtp_pwd')); ?></label>
                 <input id="smtp_pwd" name="smtp_pwd" type="password" autocomplete="new-password" value="<?php echo h($_POST['smtp_pwd'] ?? ''); ?>">
             </div>
 
             <button type="submit">
                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg')); ?>#icon-login"></use></svg>
-                <span>Create config and database</span>
+                <span><?php echo h(t('setup.submit_btn')); ?></span>
             </button>
         </form>
     </main>

@@ -17,6 +17,8 @@ require __DIR__ . '/includes/db.php';
 require __DIR__ . '/includes/render.php';
 require __DIR__ . '/includes/ses.php';
 require __DIR__ . '/includes/parsedown.php';
+require_once __DIR__ . '/includes/i18n.php';
+pc_set_language((string)($config['language'] ?? 'en'));
 
 require_admin_login($config);
 
@@ -33,7 +35,7 @@ $publishedPage = max(1, (int)($_GET['published_page'] ?? $_POST['published_page'
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = $_POST['csrf_token'] ?? '';
     if (!hash_equals($_SESSION['csrf_token'], $token)) {
-        $errors[] = 'Invalid CSRF token.';
+        $errors[] = t('dashboard.err_csrf');
     } else {
         $action = $_POST['action'] ?? '';
         $commentId = isset($_POST['comment_id']) ? (int)$_POST['comment_id'] : 0;
@@ -41,12 +43,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $comment = fetch_comment_by_id($config, $commentId);
 
         if (!$comment) {
-            $errors[] = 'Comment not found.';
+            $errors[] = t('dashboard.err_not_found');
         } elseif ($action === 'publish') {
             if ($comment['status'] !== 'pending') {
-                $errors[] = 'Only pending comments can be published.';
+                $errors[] = t('dashboard.err_not_pending');
             } elseif (publish_comment($config, $commentId)) {
-                $messages[] = 'Comment published.';
+                $messages[] = t('dashboard.msg_published');
                 if ($comment['parent_id']) {
                     $parent = fetch_comment_by_id($config, (int)$comment['parent_id']);
                     if ($parent && !empty($parent['email_plain'])) {
@@ -54,30 +56,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
             } else {
-                $errors[] = 'Unable to publish comment.';
+                $errors[] = t('dashboard.err_publish');
             }
         } elseif ($action === 'delete') {
             $isThreadRoot = (int)($comment['parent_id'] ?? 0) === 0;
             if ($isThreadRoot) {
                 if (delete_comment_thread($config, $commentId)) {
-                    $messages[] = 'Thread deleted.';
+                    $messages[] = t('dashboard.msg_thread_deleted');
                 } else {
-                    $errors[] = 'Unable to delete thread.';
+                    $errors[] = t('dashboard.err_delete_thread');
                 }
             } elseif (delete_comment($config, $commentId)) {
-                $messages[] = $context === 'published' ? 'Published comment deleted.' : 'Comment deleted.';
+                $messages[] = $context === 'published' ? t('dashboard.msg_pub_deleted') : t('dashboard.msg_comment_deleted');
             } else {
-                $errors[] = 'Unable to delete comment.';
+                $errors[] = t('dashboard.err_delete_comment');
             }
         } elseif ($action === 'reply') {
             $replyContent = trim($_POST['reply_content'] ?? '');
             if ($replyContent === '') {
-                $errors[] = 'Reply content cannot be empty.';
+                $errors[] = t('dashboard.err_reply_empty');
             } else {
                 $wasPending = $comment['status'] === 'pending';
                 if ($wasPending) {
                     if (!publish_comment($config, $commentId)) {
-                        $errors[] = 'Unable to publish comment before replying.';
+                        $errors[] = t('dashboard.err_pub_for_reply');
                     } else {
                         $comment = fetch_comment_by_id($config, $commentId) ?? $comment;
                     }
@@ -87,13 +89,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $reply = save_author_reply($config, $comment, $replyContent);
                     if ($reply) {
                         $messages[] = $wasPending
-                            ? 'Comment published and reply posted as author.'
-                            : 'Reply posted as author.';
+                            ? t('dashboard.msg_pub_and_replied')
+                            : t('dashboard.msg_reply_posted');
                         if (!empty($comment['email_plain'])) {
                             send_reply_notification($config, $comment, $reply);
                         }
                     } else {
-                        $errors[] = 'Unable to save reply.';
+                        $errors[] = t('dashboard.err_save_reply');
                     }
                 }
             }
@@ -121,10 +123,10 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
 
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="<?php echo e(_pc_lang_code()); ?>">
 <head>
     <meta charset="UTF-8">
-    <title>Comments Admin</title>
+    <title><?php echo e(t('dashboard.title')); ?></title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Ctext x='50%25' y='70%25' font-size='96' text-anchor='middle'%3E%F0%9F%92%AD%3C/text%3E%3C/svg%3E">
     <link rel="stylesheet" href="<?php echo e(pc_url('/public/style.css', $config)); ?>?v=<?php echo e((string)$styleVersion); ?>">
@@ -134,11 +136,11 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
         <div class="admin-top-actions">
             <a class="button" href="<?php echo e(pc_url('/settings.php', $config)); ?>">
                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-settings"></use></svg>
-                <span>Settings</span>
+                <span><?php echo e(t('dashboard.settings_btn')); ?></span>
             </a>
             <a class="button danger" href="<?php echo e(pc_url('/logout.php', $config)); ?>">
                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-logout"></use></svg>
-                <span>Log out</span>
+                <span><?php echo e(t('dashboard.logout_btn')); ?></span>
             </a>
         </div>
         <?php foreach ($messages as $message): ?>
@@ -150,13 +152,13 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
         <?php endforeach; ?>
 
         <section class="admin-section" id="pending-comments">
-            <h2>Pending Comments</h2>
+            <h2><?php echo e(t('dashboard.pending_heading')); ?></h2>
             <?php echo render_admin_comments_table($pendingComments, $csrfToken, $config, 'pending', $pendingPage, $publishedPage); ?>
             <?php echo render_admin_pagination($pendingPage, $pendingPages, 'pending', $pendingPage, $publishedPage); ?>
         </section>
 
         <section class="admin-section" id="published-comments">
-            <h2>Published Comments</h2>
+            <h2><?php echo e(t('dashboard.published_heading')); ?></h2>
             <?php echo render_admin_comments_table($publishedComments, $csrfToken, $config, 'published', $pendingPage, $publishedPage); ?>
             <?php echo render_admin_pagination($publishedPage, $publishedPages, 'published', $pendingPage, $publishedPage); ?>
         </section>
@@ -190,18 +192,17 @@ function send_reply_notification(array $config, array $parent, array $reply): vo
         return;
     }
 
-    $subject = 'Someone replied to your comment';
+    $subject = t('notifications.reply_subject');
     $postSlug = $reply['post_slug'] ?? $parent['post_slug'];
     $postTitle = resolve_post_title($postSlug, $config);
     $postUrl = build_post_url($config, $postSlug) . '#comments';
-    $bodyText = sprintf(
-        "Hi %s,\n\n%s replied to your comment on post %s.\n\nReply:\n%s\n\nClick here to view the reply: %s",
-        $parent['name'],
-        $reply['name'],
-        $postTitle,
-        trim(strip_tags($reply['content_html'])),
-        $postUrl
-    );
+    $bodyText = t('notifications.reply_body', [
+        'recipient' => $parent['name'],
+        'replier'   => $reply['name'],
+        'post'      => $postTitle,
+        'reply'     => trim(strip_tags($reply['content_html'])),
+        'url'       => $postUrl,
+    ]);
 
     ses_send_email($config, $to, $subject, $bodyText);
 }

@@ -34,6 +34,11 @@ function normalize_comments_date_format(string $dateFormat): string
     return $dateFormat;
 }
 
+function default_comments_language(): string
+{
+    return 'en';
+}
+
 function build_config_php(array $d): string
 {
     $lines = [];
@@ -41,6 +46,7 @@ function build_config_php(array $d): string
     $lines[] = '';
     $lines[] = 'return [';
     $lines[] = "    'db_path' => __DIR__ . '/db/comments.sqlite',";
+    $lines[] = "    'language' => " . var_export($d['language'] ?? default_comments_language(), true) . ',';
     $lines[] = "    'admin_username' => " . var_export($d['admin_username'], true) . ',';
     $lines[] = "    'admin_password_hash' => " . var_export($d['admin_password_hash'], true) . ',';
     $lines[] = "    'sodium_key' => hex2bin(" . var_export($d['sodium_key_hex'], true) . '),';

@@ -15,6 +15,8 @@ $configPath = __DIR__ . '/config.php';
 $config = require $configPath;
 require __DIR__ . '/includes/admin_auth.php';
 require __DIR__ . '/includes/config_builder.php';
+require_once __DIR__ . '/includes/i18n.php';
+pc_set_language((string)($config['language'] ?? 'en'));
 
 require_admin_login($config);
 
@@ -26,6 +28,7 @@ $errors = [];
 $messages = [];
 
 $form = [
+    'language'       => (string)($config['language'] ?? default_comments_language()),
     'admin_username' => (string)($config['admin_username'] ?? ''),
     'timezone' => (string)($config['timezone'] ?? default_comments_timezone()),
     'date_format' => (string)($config['date_format'] ?? default_comments_date_format()),
@@ -60,18 +63,19 @@ if (!empty($config['smtp']['host'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = (string)($_POST['csrf_token'] ?? '');
     if (!hash_equals((string)$_SESSION['csrf_token'], $token)) {
-        $errors[] = 'Invalid CSRF token.';
+        $errors[] = t('settings.err_csrf');
     } elseif (($_POST['action'] ?? '') === 'test_email') {
         require_once __DIR__ . '/includes/ses.php';
         $testTo = (string)($config['moderation']['notify_email'] ?? '');
         if ($testTo === '') {
-            $errors[] = 'No notification email address is configured.';
-        } elseif (ses_send_email($config, $testTo, 'Pure Comments: test email', 'This is a test email from Pure Comments to confirm your email notifications are working correctly.')) {
-            $messages[] = 'Test email sent to ' . $testTo . '.';
+            $errors[] = t('settings.err_no_notify_email');
+        } elseif (ses_send_email($config, $testTo, t('notifications.test_subject'), t('notifications.test_body'))) {
+            $messages[] = t('settings.msg_test_sent', ['email' => $testTo]);
         } else {
-            $errors[] = 'Test email failed to send. Check your email settings and server error logs.';
+            $errors[] = t('settings.err_test_email');
         }
     } else {
+        $form['language']       = trim((string)($_POST['language'] ?? default_comments_language()));
         $form['admin_username'] = trim((string)($_POST['admin_username'] ?? ''));
         $form['timezone'] = trim((string)($_POST['timezone'] ?? default_comments_timezone()));
         $form['date_format'] = trim((string)($_POST['date_format'] ?? default_comments_date_format()));
@@ -123,67 +127,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($form['admin_username'] === '') {
-            $errors[] = 'Admin username is required.';
+            $errors[] = t('settings.err_username');
         }
         if (!is_valid_timezone_id($form['timezone'])) {
-            $errors[] = 'Timezone must be a valid PHP timezone identifier (e.g. UTC, Europe/London).';
+            $errors[] = t('settings.err_timezone');
         }
         if ($form['date_format'] === '') {
-            $errors[] = 'Date format is required.';
+            $errors[] = t('settings.err_date_format');
         }
         if ($form['spam_challenge_question'] === '') {
-            $errors[] = 'Spam challenge question is required.';
+            $errors[] = t('settings.err_challenge_question');
         }
         if ($form['spam_challenge_answer'] === '') {
-            $errors[] = 'Spam challenge answer is required.';
+            $errors[] = t('settings.err_challenge_answer');
         }
 
         if ($adminPassword !== '' || $adminPasswordConfirm !== '') {
             if ($adminPassword === '') {
-                $errors[] = 'Enter a new admin password to change credentials.';
+                $errors[] = t('settings.err_password_empty');
             } elseif (strlen($adminPassword) < 10) {
-                $errors[] = 'Admin password must be at least 10 characters if set.';
+                $errors[] = t('settings.err_password_length');
             }
             if (!hash_equals($adminPassword, $adminPasswordConfirm)) {
-                $errors[] = 'Admin passwords do not match.';
+                $errors[] = t('settings.err_passwords_match');
             }
         }
 
         if ($form['author_name'] === '') {
-            $errors[] = 'Author name is required.';
+            $errors[] = t('settings.err_author_name');
         }
 
         if (!filter_var($form['author_email'], FILTER_VALIDATE_EMAIL)) {
-            $errors[] = 'Author email must be valid.';
+            $errors[] = t('settings.err_author_email');
         }
 
         if (!filter_var($form['notify_email'], FILTER_VALIDATE_EMAIL)) {
-            $errors[] = 'Notification email must be valid.';
+            $errors[] = t('settings.err_notify_email');
         }
 
         if ($form['post_base_url'] === '' || !filter_var($form['post_base_url'], FILTER_VALIDATE_URL)) {
-            $errors[] = 'Post base URL must be valid (e.g. https://example.com/blog).';
+            $errors[] = t('settings.err_post_base_url');
         }
 
         if ($form['moderation_base_url'] === '' || !filter_var($form['moderation_base_url'], FILTER_VALIDATE_URL)) {
-            $errors[] = 'Comments service URL must be valid (e.g. https://comments.example.com).';
+            $errors[] = t('settings.err_service_url');
         }
 
         if ($emailProvider === 'ses') {
             if ($form['source_email'] !== '' && !filter_var($form['source_email'], FILTER_VALIDATE_EMAIL)) {
-                $errors[] = 'SES source email must be valid if set.';
+                $errors[] = t('settings.err_ses_source_email');
             }
         }
 
         if ($emailProvider === 'smtp') {
             if ($form['smtp_host'] === '') {
-                $errors[] = 'SMTP host is required.';
+                $errors[] = t('settings.err_smtp_host');
             }
             if ($form['smtp_port'] === '' || !ctype_digit($form['smtp_port'])) {
-                $errors[] = 'SMTP port must be a number.';
+                $errors[] = t('settings.err_smtp_port');
             }
             if (!in_array($form['smtp_enc'], ['tls', 'ssl', ''], true)) {
-                $errors[] = 'SMTP encryption must be tls, ssl, or none.';
+                $errors[] = t('settings.err_smtp_enc');
             }
         }
 
@@ -199,6 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $configPhp = build_config_php([
+                'language' => $form['language'],
                 'admin_username' => $form['admin_username'],
                 'admin_password_hash' => $passwordHash,
                 'sodium_key_hex' => bin2hex($existingSodium),
@@ -227,11 +232,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             if (@file_put_contents($configPath, $configPhp, LOCK_EX) === false) {
-                $errors[] = 'Unable to save config.php. Check filesystem permissions.';
+                $errors[] = t('settings.err_save_config');
             } else {
                 $config = require $configPath;
+                pc_set_language((string)($config['language'] ?? 'en'));
                 $_SESSION['admin_username'] = (string)$config['admin_username'];
-                $messages[] = 'Settings saved.';
+                $messages[] = t('settings.msg_saved');
             }
         }
     }
@@ -240,11 +246,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $styleVersion = filemtime(__DIR__ . '/public/style.css');
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="<?php echo h(_pc_lang_code()); ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Comments Settings</title>
+    <title><?php echo h(t('settings.title')); ?></title>
     <link rel="stylesheet" href="<?php echo h(pc_url('/public/style.css', $config)); ?>?v=<?php echo h((string)$styleVersion); ?>">
 </head>
 <body class="admin">
@@ -252,19 +258,19 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
         <div class="admin-top-actions">
             <a class="button" href="<?php echo h(pc_url('/', $config)); ?>">
                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-back"></use></svg>
-                <span>Back to comments</span>
+                <span><?php echo h(t('settings.back_btn')); ?></span>
             </a>
             <a class="button" href="<?php echo h(pc_url('/updates.php', $config)); ?>">
                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-upgrade"></use></svg>
-                <span>Updates</span>
+                <span><?php echo h(t('settings.updates_btn')); ?></span>
             </a>
             <a class="button danger" href="<?php echo h(pc_url('/logout.php', $config)); ?>">
                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-logout"></use></svg>
-                <span>Log out</span>
+                <span><?php echo h(t('settings.logout_btn')); ?></span>
             </a>
         </div>
 
-        <h1>Settings</h1>
+        <h1><?php echo h(t('settings.heading')); ?></h1>
 
         <?php foreach ($messages as $message) : ?>
             <p class="notice success"><?php echo h($message); ?></p>
@@ -272,7 +278,7 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
 
         <?php if (!empty($errors)) : ?>
             <div class="notice error">
-                <strong>Settings errors:</strong>
+                <strong><?php echo h(t('settings.errors_heading')); ?></strong>
                 <ul>
                     <?php foreach ($errors as $error) : ?>
                         <li><?php echo h($error); ?></li>
@@ -284,113 +290,125 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
         <form method="post" class="admin-form">
             <input type="hidden" name="csrf_token" value="<?php echo h((string)$_SESSION['csrf_token']); ?>">
 
-            <h2>Admin</h2>
-            <label for="admin_username">Admin username</label>
+            <h2><?php echo h(t('settings.section_admin')); ?></h2>
+            <label for="admin_username"><?php echo h(t('settings.field_username')); ?></label>
             <input id="admin_username" name="admin_username" required value="<?php echo h($form['admin_username']); ?>">
 
-            <label for="admin_password">Admin password (leave blank to keep current)</label>
+            <label for="admin_password"><?php echo h(t('settings.field_password')); ?></label>
             <input id="admin_password" name="admin_password" type="password" minlength="10" autocomplete="new-password">
 
-            <label for="admin_password_confirm">Confirm admin password</label>
+            <label for="admin_password_confirm"><?php echo h(t('settings.field_password_confirm')); ?></label>
             <input id="admin_password_confirm" name="admin_password_confirm" type="password" minlength="10" autocomplete="new-password">
 
-            <h2>Site</h2>
-            <label for="post_base_url">Post base URL</label>
+            <?php $availableLangs = pc_available_languages(); ?>
+            <?php if (count($availableLangs) > 1) : ?>
+                <label for="language"><?php echo h(t('settings.field_language')); ?></label>
+                <select id="language" name="language" onchange="this.form.submit()">
+                    <?php foreach ($availableLangs as $langCode => $langName) : ?>
+                        <option value="<?php echo h($langCode); ?>" <?php echo $form['language'] === $langCode ? 'selected' : ''; ?>><?php echo h($langName); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            <?php else : ?>
+                <input type="hidden" name="language" value="<?php echo h($form['language']); ?>">
+            <?php endif; ?>
+
+            <h2><?php echo h(t('settings.section_site')); ?></h2>
+            <label for="post_base_url"><?php echo h(t('settings.field_post_base_url')); ?></label>
             <input id="post_base_url" name="post_base_url" required placeholder="https://example.com/blog" value="<?php echo h($form['post_base_url']); ?>">
 
-            <label for="moderation_base_url">Comments service URL</label>
+            <label for="moderation_base_url"><?php echo h(t('settings.field_service_url')); ?></label>
             <input id="moderation_base_url" name="moderation_base_url" required placeholder="https://comments.example.com" value="<?php echo h($form['moderation_base_url']); ?>">
 
             <label for="timezone">
-                Timezone
+                <?php echo h(t('settings.field_timezone')); ?>
                 <small>(<a href="https://www.php.net/manual/en/timezones.php" target="_blank" rel="noopener noreferrer">PHP timezone list</a>)</small>
             </label>
             <input id="timezone" name="timezone" required placeholder="UTC" value="<?php echo h($form['timezone']); ?>">
 
             <label for="date_format">
-                Date format
+                <?php echo h(t('settings.field_date_format')); ?>
                 <small>(<a href="https://www.php.net/manual/en/datetime.format.php" target="_blank" rel="noopener noreferrer">PHP date format docs</a>)</small>
             </label>
             <input id="date_format" name="date_format" required placeholder="Y-m-d H:i" value="<?php echo h($form['date_format']); ?>">
 
-            <label for="privacy_policy_url">Privacy policy URL</label>
+            <label for="privacy_policy_url"><?php echo h(t('settings.field_privacy_url')); ?></label>
             <input id="privacy_policy_url" name="privacy_policy_url" placeholder="/privacy#commenting" value="<?php echo h($form['privacy_policy_url']); ?>">
 
-            <h2>Spam protection</h2>
-            <label for="spam_challenge_question">Challenge question</label>
+            <h2><?php echo h(t('settings.section_spam')); ?></h2>
+            <label for="spam_challenge_question"><?php echo h(t('settings.field_challenge_question')); ?></label>
             <input id="spam_challenge_question" name="spam_challenge_question" required value="<?php echo h($form['spam_challenge_question']); ?>">
 
-            <label for="spam_challenge_answer">Challenge answer</label>
+            <label for="spam_challenge_answer"><?php echo h(t('settings.field_challenge_answer')); ?></label>
             <input id="spam_challenge_answer" name="spam_challenge_answer" required value="<?php echo h($form['spam_challenge_answer']); ?>">
 
-            <label for="spam_challenge_placeholder">Challenge placeholder (optional)</label>
+            <label for="spam_challenge_placeholder"><?php echo h(t('settings.field_challenge_ph')); ?></label>
             <input id="spam_challenge_placeholder" name="spam_challenge_placeholder" value="<?php echo h($form['spam_challenge_placeholder']); ?>">
 
-            <h2>Author</h2>
-            <label for="author_name">Author name</label>
+            <h2><?php echo h(t('settings.section_author')); ?></h2>
+            <label for="author_name"><?php echo h(t('settings.field_author_name')); ?></label>
             <input id="author_name" name="author_name" required value="<?php echo h($form['author_name']); ?>">
 
-            <label for="author_email">Author email</label>
+            <label for="author_email"><?php echo h(t('settings.field_author_email')); ?></label>
             <input id="author_email" name="author_email" type="email" required value="<?php echo h($form['author_email']); ?>">
 
-            <h2>Email notifications (optional)</h2>
-            <label for="email_provider">Email provider</label>
+            <h2><?php echo h(t('settings.section_email')); ?></h2>
+            <label for="email_provider"><?php echo h(t('settings.field_email_provider')); ?></label>
             <select id="email_provider" name="email_provider">
-                <option value="" <?php echo $emailProvider === '' ? 'selected' : ''; ?>>None</option>
-                <option value="ses" <?php echo $emailProvider === 'ses' ? 'selected' : ''; ?>>Amazon SES</option>
-                <option value="smtp" <?php echo $emailProvider === 'smtp' ? 'selected' : ''; ?>>SMTP</option>
+                <option value="" <?php echo $emailProvider === '' ? 'selected' : ''; ?>><?php echo h(t('settings.email_none')); ?></option>
+                <option value="ses" <?php echo $emailProvider === 'ses' ? 'selected' : ''; ?>><?php echo h(t('settings.email_ses')); ?></option>
+                <option value="smtp" <?php echo $emailProvider === 'smtp' ? 'selected' : ''; ?>><?php echo h(t('settings.email_smtp')); ?></option>
             </select>
 
-            <label for="notify_email">Moderation notify email</label>
+            <label for="notify_email"><?php echo h(t('settings.field_notify_email')); ?></label>
             <input id="notify_email" name="notify_email" type="email" value="<?php echo h($form['notify_email']); ?>">
 
             <div id="ses-settings" class="admin-form-section" hidden>
-                <label for="aws_region">AWS region</label>
+                <label for="aws_region"><?php echo h(t('settings.field_aws_region')); ?></label>
                 <input id="aws_region" name="aws_region" placeholder="eu-west-1" value="<?php echo h($form['aws_region']); ?>">
 
-                <label for="aws_access_key">AWS access key</label>
+                <label for="aws_access_key"><?php echo h(t('settings.field_aws_access_key')); ?></label>
                 <input id="aws_access_key" name="aws_access_key" value="<?php echo h($form['aws_access_key']); ?>">
 
-                <label for="aws_secret_key">AWS secret key</label>
+                <label for="aws_secret_key"><?php echo h(t('settings.field_aws_secret_key')); ?></label>
                 <input id="aws_secret_key" name="aws_secret_key" value="<?php echo h($form['aws_secret_key']); ?>">
 
-                <label for="source_email">Source email address</label>
+                <label for="source_email"><?php echo h(t('settings.field_source_email')); ?></label>
                 <input id="source_email" name="source_email" type="email" value="<?php echo h($form['source_email']); ?>">
 
-                <label for="source_name">Source name</label>
+                <label for="source_name"><?php echo h(t('settings.field_source_name')); ?></label>
                 <input id="source_name" name="source_name" value="<?php echo h($form['source_name']); ?>">
             </div>
 
             <div id="smtp-settings" class="admin-form-section" hidden>
-                <label for="smtp_host">SMTP host</label>
+                <label for="smtp_host"><?php echo h(t('settings.field_smtp_host')); ?></label>
                 <input id="smtp_host" name="smtp_host" placeholder="smtp.example.com" value="<?php echo h($form['smtp_host']); ?>">
 
-                <label for="smtp_port">SMTP port</label>
+                <label for="smtp_port"><?php echo h(t('settings.field_smtp_port')); ?></label>
                 <input id="smtp_port" name="smtp_port" type="number" min="1" max="65535" placeholder="587" value="<?php echo h($form['smtp_port']); ?>">
 
-                <label for="smtp_enc">Encryption</label>
+                <label for="smtp_enc"><?php echo h(t('settings.field_smtp_enc')); ?></label>
                 <select id="smtp_enc" name="smtp_enc">
-                    <option value="tls" <?php echo $form['smtp_enc'] === 'tls' ? 'selected' : ''; ?>>STARTTLS (port 587)</option>
-                    <option value="ssl" <?php echo $form['smtp_enc'] === 'ssl' ? 'selected' : ''; ?>>SSL/TLS (port 465)</option>
-                    <option value="" <?php echo $form['smtp_enc'] === '' ? 'selected' : ''; ?>>None (port 25)</option>
+                    <option value="tls" <?php echo $form['smtp_enc'] === 'tls' ? 'selected' : ''; ?>><?php echo h(t('settings.smtp_enc_tls')); ?></option>
+                    <option value="ssl" <?php echo $form['smtp_enc'] === 'ssl' ? 'selected' : ''; ?>><?php echo h(t('settings.smtp_enc_ssl')); ?></option>
+                    <option value="" <?php echo $form['smtp_enc'] === '' ? 'selected' : ''; ?>><?php echo h(t('settings.smtp_enc_none')); ?></option>
                 </select>
 
-                <label for="smtp_user">SMTP username</label>
+                <label for="smtp_user"><?php echo h(t('settings.field_smtp_user')); ?></label>
                 <input id="smtp_user" name="smtp_user" autocomplete="off" value="<?php echo h($form['smtp_user']); ?>">
 
-                <label for="smtp_pwd">SMTP password</label>
+                <label for="smtp_pwd"><?php echo h(t('settings.field_smtp_pwd')); ?></label>
                 <input id="smtp_pwd" name="smtp_pwd" type="password" autocomplete="new-password" value="<?php echo h($form['smtp_pwd']); ?>">
             </div>
 
             <div class="admin-form-buttons">
                 <button type="submit">
                     <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-settings"></use></svg>
-                    <span>Save settings</span>
+                    <span><?php echo h(t('settings.save_btn')); ?></span>
                 </button>
                 <?php if ($emailProvider !== '') : ?>
                 <button type="submit" name="action" value="test_email" class="danger">
                     <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-mail"></use></svg>
-                    <span>Send test email</span>
+                    <span><?php echo h(t('settings.test_email_btn')); ?></span>
                 </button>
                 <?php endif; ?>
             </div>

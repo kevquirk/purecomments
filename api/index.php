@@ -18,6 +18,8 @@ require __DIR__ . '/../includes/db.php';
 require __DIR__ . '/../includes/parsedown.php';
 require __DIR__ . '/../includes/render.php';
 require __DIR__ . '/../includes/ses.php';
+require_once __DIR__ . '/../includes/i18n.php';
+pc_set_language((string)($config['language'] ?? 'en'));
 
 $missingConfig = missing_required_config_keys($config);
 if ($missingConfig !== []) {
@@ -107,6 +109,7 @@ function handle_comments_index(array $config, string $slug): void
         'privacy_policy_url' => get_privacy_policy_url($config),
         'challenge_question' => get_spam_challenge_question($config),
         'challenge_placeholder' => get_spam_challenge_placeholder($config),
+        'strings' => get_embed_strings(),
     ]);
 }
 
@@ -115,7 +118,7 @@ function handle_submit_comment(array $config): void
     $ip = (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown');
 
     if (is_submit_rate_limited($config, $ip)) {
-        respond_json(['error' => 'Too many requests. Please wait before submitting again.'], 429);
+        respond_json(['error' => t('api.rate_limited')], 429);
     }
 
     $input = json_decode(file_get_contents('php://input'), true);
@@ -188,19 +191,18 @@ function handle_submit_comment(array $config): void
     $commentId = insert_comment($config, $data);
 
     $moderationLink = rtrim($config['moderation']['base_url'], '/') . '/';
-    $subject = 'New comment awaiting moderation';
-    $bodyText = sprintf(
-        "New comment waiting for review\n\nPost: %s\nName: %s\nContent:\n%s\n\nModerate: %s",
-        $postTitle,
-        $name,
-        $content,
-        $moderationLink
-    );
+    $subject = t('notifications.moderation_subject');
+    $bodyText = t('notifications.moderation_body', [
+        'post'    => $postTitle,
+        'name'    => $name,
+        'content' => $content,
+        'url'     => $moderationLink,
+    ]);
     ses_send_email($config, $config['moderation']['notify_email'], $subject, $bodyText);
 
     respond_json([
         'success' => true,
-        'message' => 'Your comment is awaiting moderation.',
+        'message' => t('api.comment_awaiting'),
         'comment_id' => $commentId,
     ]);
 }
@@ -219,6 +221,21 @@ function normalize_website(string $input): ?string
         return null;
     }
     return $sanitized;
+}
+
+function get_embed_strings(): array
+{
+    $keys = [
+        'title', 'unavailable', 'load_btn', 'loading', 'load_error', 'no_comments',
+        'author_badge', 'reply_btn', 'replying_to', 'cancel_reply', 'form_heading',
+        'privacy_link', 'field_name', 'field_email', 'field_website', 'field_comment',
+        'submitting', 'submit_btn', 'submit_success', 'submit_error',
+    ];
+    $strings = [];
+    foreach ($keys as $key) {
+        $strings[$key] = t('embed.' . $key);
+    }
+    return $strings;
 }
 
 function get_privacy_policy_url(array $config): string

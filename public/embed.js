@@ -14,11 +14,37 @@
         return;
     }
 
+    const fallbackStrings = {
+        title:           'Comments',
+        unavailable:     'Comments unavailable.',
+        load_btn:        'Load comments',
+        loading:         '💭 Loading comments…',
+        load_error:      'Comments could not be loaded.',
+        no_comments:     'No comments yet.',
+        author_badge:    'Admin',
+        reply_btn:       '↪ Reply',
+        replying_to:     'Replying to comment #{id}',
+        cancel_reply:    '❌ Cancel reply',
+        form_heading:    'Leave a comment',
+        privacy_link:    'Read the comment privacy notice',
+        field_name:      'Name',
+        field_email:     'Email (optional)',
+        field_website:   'Website (optional)',
+        field_comment:   'Comment (Markdown supported)',
+        submitting:      'Sending…',
+        submit_btn:      'Submit comment',
+        submit_success:  'Thanks! Your comment is awaiting moderation.',
+        submit_error:    'Oops! There was a problem submitting your comment.',
+    };
+    // s is rebuilt after the API responds (with server-translated strings as the base layer).
+    // fallbackStrings is used only for the pre-load UI (load button, unavailable message).
+    let s = Object.assign({}, fallbackStrings, (window.PureComments && window.PureComments.strings) || {});
+
     const header = document.createElement('div');
     header.className = 'comments-header';
 
     const title = document.createElement('h2');
-    title.textContent = 'Comments';
+    title.textContent = s.title;
     header.appendChild(title);
 
     const contentArea = document.createElement('div');
@@ -32,13 +58,13 @@
         : '';
     const slug = normalizePostSlug(configuredSlug !== '' ? configuredSlug : derivePostSlugFromLocation(window.location.pathname));
     if (!slug) {
-        contentArea.textContent = 'Comments unavailable.';
+        contentArea.textContent = s.unavailable;
         return;
     }
 
     const loadButton = document.createElement('button');
     loadButton.type = 'button';
-    loadButton.textContent = 'Load comments';
+    loadButton.textContent = s.load_btn;
     loadButton.className = 'button load';
     loadButton.addEventListener('click', function () {
         contentArea.innerHTML = '';
@@ -48,7 +74,7 @@
     contentArea.appendChild(loadButton);
 
     function loadComments() {
-        contentArea.innerHTML = '<p>💭 Loading comments…</p>';
+        contentArea.innerHTML = '<p>' + s.loading + '</p>';
         apiFetch(
             baseUrl + '/api/comments/' + slug,
             baseUrl + '/api/index.php?endpoint=' + encodeURIComponent('comments/' + slug)
@@ -58,11 +84,15 @@
                 renderCommentsSection(data || {});
             })
             .catch(function () {
-                contentArea.innerHTML = '<p>Comments could not be loaded.</p>';
+                contentArea.innerHTML = '<p>' + s.load_error + '</p>';
             });
     }
 
     function renderCommentsSection(data) {
+        if (data.strings && typeof data.strings === 'object') {
+            s = Object.assign({}, fallbackStrings, data.strings, (window.PureComments && window.PureComments.strings) || {});
+        }
+
         const comments = Array.isArray(data.comments) ? data.comments : [];
         const challengeQuestion = typeof data.challenge_question === 'string'
             ? data.challenge_question.trim()
@@ -79,7 +109,7 @@
         listWrapper.className = 'comments-thread';
         if (comments.length === 0) {
             const empty = document.createElement('p');
-            empty.textContent = 'No comments yet.';
+            empty.textContent = s.no_comments;
             listWrapper.appendChild(empty);
         } else {
             comments.forEach(function (comment) {
@@ -138,7 +168,7 @@
         if (comment.is_author) {
             const badge = document.createElement('span');
             badge.className = 'comment-badge';
-            badge.textContent = 'Admin';
+            badge.textContent = s.author_badge;
             nameWrapper.appendChild(badge);
         }
 
@@ -159,7 +189,7 @@
         actions.className = 'comment-actions';
         const reply = document.createElement('button');
         reply.type = 'button';
-        reply.textContent = '↪ Reply';
+        reply.textContent = s.reply_btn;
         reply.addEventListener('click', function () {
             const form = container.querySelector('form.comments-form');
             if (!form) {
@@ -172,7 +202,7 @@
                 return;
             }
             parentInput.value = comment.id;
-            replyText.textContent = 'Replying to comment #' + comment.id;
+            replyText.textContent = s.replying_to.replace('{id}', comment.id);
             replyBox.classList.remove('hidden');
             form.scrollIntoView({ behavior: 'smooth' });
         });
@@ -191,7 +221,7 @@
         form.noValidate = true;
 
         const heading = document.createElement('h3');
-        heading.textContent = 'Leave a comment';
+        heading.textContent = s.form_heading;
         form.appendChild(heading);
 
         if (privacyPolicyUrl !== '') {
@@ -199,7 +229,7 @@
             privacyNote.className = 'comment-privacy-link';
             const privacyAnchor = document.createElement('a');
             privacyAnchor.href = privacyPolicyUrl;
-            privacyAnchor.textContent = 'Read the comment privacy notice';
+            privacyAnchor.textContent = s.privacy_link;
             privacyNote.appendChild(privacyAnchor);
             form.appendChild(privacyNote);
         }
@@ -210,7 +240,7 @@
         replying.appendChild(replyText);
         const cancelReply = document.createElement('button');
         cancelReply.type = 'button';
-        cancelReply.textContent = '❌ Cancel reply';
+        cancelReply.textContent = s.cancel_reply;
         cancelReply.addEventListener('click', function () {
             const parentInput = form.querySelector('input[name="parent_id"]');
             if (parentInput) {
@@ -222,12 +252,12 @@
         replying.appendChild(cancelReply);
         form.appendChild(replying);
 
-        form.appendChild(buildLabelInput('Name', 'text', 'name', true));
-        form.appendChild(buildLabelInput('Email (optional)', 'email', 'email', false));
-        form.appendChild(buildLabelInput('Website (optional)', 'url', 'website', false));
+        form.appendChild(buildLabelInput(s.field_name, 'text', 'name', true));
+        form.appendChild(buildLabelInput(s.field_email, 'email', 'email', false));
+        form.appendChild(buildLabelInput(s.field_website, 'url', 'website', false));
 
         const commentLabel = document.createElement('label');
-        commentLabel.textContent = 'Comment (Markdown supported)';
+        commentLabel.textContent = s.field_comment;
         const textarea = document.createElement('textarea');
         textarea.name = 'content';
         textarea.required = true;
@@ -267,13 +297,13 @@
 
         const submit = document.createElement('button');
         submit.type = 'submit';
-        submit.textContent = 'Submit comment';
+        submit.textContent = s.submit_btn;
         submit.className = 'button';
         form.appendChild(submit);
 
         form.addEventListener('submit', function (event) {
             event.preventDefault();
-            status.textContent = 'Sending…';
+            status.textContent = s.submitting;
             status.classList.remove('success');
             status.classList.remove('error');
 
@@ -302,7 +332,7 @@
             )
                 .then(handleResponse)
                 .then(function (data) {
-                    status.textContent = data.message || 'Thanks! I need to check your comment before it is published, but it should be live soon.';
+                    status.textContent = data.message || s.submit_success;
                     status.classList.add('success');
                     form.reset();
                     if (parentInput) {
@@ -318,7 +348,7 @@
                     }
                 })
                 .catch(function () {
-                    status.textContent = 'Oops! There was a problem submitting your comment.';
+                    status.textContent = s.submit_error;
                     status.classList.add('error');
                 });
         });
