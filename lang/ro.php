@@ -1,4 +1,7 @@
 <?php
+
+// Thanks to Cristian (https://thinkroot.xyz/) for creating this translation pack.
+
 declare(strict_types=1);
 
 return [
