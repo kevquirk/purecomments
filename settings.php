@@ -51,6 +51,7 @@ $form = [
     'smtp_user' => (string)($config['smtp']['user'] ?? ''),
     'smtp_pwd' => (string)($config['smtp']['pwd'] ?? ''),
     'smtp_enc' => (string)($config['smtp']['enc'] ?? 'tls'),
+    'smtp_debug' => (bool)($config['smtp']['debug'] ?? false),
 ];
 
 $emailProvider = '';
@@ -65,14 +66,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!hash_equals((string)$_SESSION['csrf_token'], $token)) {
         $errors[] = t('settings.err_csrf');
     } elseif (($_POST['action'] ?? '') === 'test_email') {
-        require_once __DIR__ . '/includes/ses.php';
         $testTo = (string)($config['moderation']['notify_email'] ?? '');
+        $smtpDebugLog = null;
         if ($testTo === '') {
             $errors[] = t('settings.err_no_notify_email');
-        } elseif (ses_send_email($config, $testTo, t('notifications.test_subject'), t('notifications.test_body'))) {
-            $messages[] = t('settings.msg_test_sent', ['email' => $testTo]);
         } else {
-            $errors[] = t('settings.err_test_email');
+            if (!empty($config['smtp']['host'])) {
+                require_once __DIR__ . '/includes/smtpmail.php';
+                $ok = smtp_send_email($config, $testTo, t('notifications.test_subject'), t('notifications.test_body'), '', $smtpDebugLog);
+            } else {
+                require_once __DIR__ . '/includes/ses.php';
+                $ok = ses_send_email($config, $testTo, t('notifications.test_subject'), t('notifications.test_body'));
+            }
+            if ($ok) {
+                $messages[] = t('settings.msg_test_sent', ['email' => $testTo]);
+            } else {
+                $errors[] = t('settings.err_test_email');
+            }
         }
     } else {
         $form['language']       = trim((string)($_POST['language'] ?? default_comments_language()));
@@ -103,11 +113,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $form['smtp_pwd'] = '';
             $form['smtp_enc'] = 'tls';
         } elseif ($emailProvider === 'smtp') {
-            $form['smtp_host'] = trim((string)($_POST['smtp_host'] ?? ''));
-            $form['smtp_port'] = trim((string)($_POST['smtp_port'] ?? '587'));
-            $form['smtp_user'] = trim((string)($_POST['smtp_user'] ?? ''));
-            $form['smtp_pwd'] = trim((string)($_POST['smtp_pwd'] ?? ''));
-            $form['smtp_enc'] = trim((string)($_POST['smtp_enc'] ?? 'tls'));
+            $form['smtp_host']  = trim((string)($_POST['smtp_host'] ?? ''));
+            $form['smtp_port']  = trim((string)($_POST['smtp_port'] ?? '587'));
+            $form['smtp_user']  = trim((string)($_POST['smtp_user'] ?? ''));
+            $form['smtp_pwd']   = trim((string)($_POST['smtp_pwd'] ?? ''));
+            $form['smtp_enc']   = trim((string)($_POST['smtp_enc'] ?? 'tls'));
+            $form['smtp_debug'] = isset($_POST['smtp_debug']);
             $form['aws_region'] = '';
             $form['aws_access_key'] = '';
             $form['aws_secret_key'] = '';
@@ -222,11 +233,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'aws_secret_key' => $form['aws_secret_key'],
                 'source_email' => $form['source_email'],
                 'source_name' => $form['source_name'],
-                'smtp_host' => $form['smtp_host'],
-                'smtp_port' => $form['smtp_port'],
-                'smtp_user' => $form['smtp_user'],
-                'smtp_pwd' => $form['smtp_pwd'],
-                'smtp_enc' => $form['smtp_enc'],
+                'smtp_host'  => $form['smtp_host'],
+                'smtp_port'  => $form['smtp_port'],
+                'smtp_user'  => $form['smtp_user'],
+                'smtp_pwd'   => $form['smtp_pwd'],
+                'smtp_enc'   => $form['smtp_enc'],
+                'smtp_debug' => $form['smtp_debug'],
                 'notify_email' => $form['notify_email'],
                 'moderation_base_url' => rtrim($form['moderation_base_url'], '/') . '/',
             ]);
@@ -278,13 +290,17 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
 
         <?php if (!empty($errors)) : ?>
             <div class="notice error">
-                <strong><?php echo h(t('settings.errors_heading')); ?></strong>
                 <ul>
                     <?php foreach ($errors as $error) : ?>
                         <li><?php echo h($error); ?></li>
                     <?php endforeach; ?>
                 </ul>
             </div>
+        <?php endif; ?>
+
+        <?php if (!empty($smtpDebugLog)) : ?>
+            <h2><?php echo h(t('settings.smtp_debug_heading')); ?></h2>
+            <pre class="smtp-debug-log"><?php echo h($smtpDebugLog); ?></pre>
         <?php endif; ?>
 
         <form method="post" class="admin-form">
@@ -398,6 +414,11 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
 
                 <label for="smtp_pwd"><?php echo h(t('settings.field_smtp_pwd')); ?></label>
                 <input id="smtp_pwd" name="smtp_pwd" type="password" autocomplete="new-password" value="<?php echo h($form['smtp_pwd']); ?>">
+
+                <label class="inline-checkbox" for="smtp_debug">
+                    <input id="smtp_debug" name="smtp_debug" type="checkbox" value="1" <?php echo $form['smtp_debug'] ? 'checked' : ''; ?>>
+                    <?php echo h(t('settings.field_smtp_debug')); ?>
+                </label>
             </div>
 
             <div class="admin-form-buttons">

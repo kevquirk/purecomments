@@ -103,6 +103,8 @@ return [
         'field_smtp_enc'           => 'Verschlüsselung',
         'field_smtp_user'          => 'SMTP-Benutzername',
         'field_smtp_pwd'           => 'SMTP-Passwort',
+        'field_smtp_debug'         => 'SMTP-Debug-Protokollierung aktivieren',
+        'smtp_debug_heading'       => 'SMTP-Debug-Protokoll',
         'field_language'           => 'Admin-Sprache',
         'email_none'               => 'Keine',
         'email_ses'                => 'Amazon SES',

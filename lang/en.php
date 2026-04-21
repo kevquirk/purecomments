@@ -103,6 +103,8 @@ return [
         'field_smtp_enc'           => 'Encryption',
         'field_smtp_user'          => 'SMTP username',
         'field_smtp_pwd'           => 'SMTP password',
+        'field_smtp_debug'         => 'Enable SMTP debug logging',
+        'smtp_debug_heading'       => 'SMTP debug log',
         'field_language'           => 'Admin language',
         'email_none'               => 'None',
         'email_ses'                => 'Amazon SES',

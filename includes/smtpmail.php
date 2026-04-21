@@ -2,13 +2,14 @@
 declare(strict_types=1);
 
 use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
 require_once __DIR__ . '/PHPMailer/src/Exception.php';
 require_once __DIR__ . '/PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/PHPMailer/src/SMTP.php';
 
-function smtp_send_email(array $config, string $to, string $subject, string $textBody, string $htmlBody = ''): bool
+function smtp_send_email(array $config, string $to, string $subject, string $textBody, string $htmlBody = '', ?string &$debugLog = null): bool
 {
     $smtp = $config['smtp'];
     $mail = new PHPMailer(true);
@@ -21,6 +22,15 @@ function smtp_send_email(array $config, string $to, string $subject, string $tex
         $mail->Username   = $smtp['user'];
         $mail->Password   = $smtp['pwd'];
         $mail->SMTPSecure = $smtp['enc'];
+        $mail->CharSet    = PHPMailer::CHARSET_UTF8;
+        $mail->Encoding   = 'quoted-printable';
+
+        if (!empty($smtp['debug'])) {
+            $mail->SMTPDebug   = SMTP::DEBUG_SERVER;
+            $mail->Debugoutput = function (string $str, int $level) use (&$debugLog): void {
+                $debugLog .= $str;
+            };
+        }
 
         $mail->setFrom($config['author']['email'], $config['author']['name']);
         $mail->addAddress($to);
