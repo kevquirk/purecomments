@@ -5,20 +5,20 @@ return [
     'name' => 'Deutsch',
 
     'login' => [
-        'title'                => 'Kommentare Login',
-        'heading'              => 'Kommentare Admin Login',
+        'title'                => 'Comments-Anmeldung',
+        'heading'              => 'Comments-Admin-Anmeldung',
         'username'             => 'Benutzername',
         'password'             => 'Passwort',
         'submit'               => 'Anmelden',
         'setup_complete'       => 'Einrichtung abgeschlossen. Melde dich an, um Kommentare zu moderieren.',
-        'setup_cleanup_failed' => 'Automatische Bereinigung fehlgeschlagen. Löschen oder sperren Sie /setup.php manuell.',
+        'setup_cleanup_failed' => 'Automatische Bereinigung fehlgeschlagen. Lösche oder sperre /setup.php manuell.',
         'err_required'         => 'Benutzername und Passwort sind erforderlich.',
         'err_rate_limited'     => 'Zu viele fehlgeschlagene Versuche. Versuche es in {seconds} Sekunden erneut.',
         'err_invalid'          => 'Ungültige Anmeldedaten.',
     ],
 
     'dashboard' => [
-        'title'                 => 'Kommentare Admin',
+        'title'                 => 'Comments-Admin',
         'settings_btn'          => 'Einstellungen',
         'logout_btn'            => 'Abmelden',
         'pending_heading'       => 'Ausstehende Kommentare',
@@ -58,7 +58,7 @@ return [
         'confirm_delete_comment'  => 'Diesen Kommentar löschen?',
         'confirm_delete_reply'    => 'Diese Antwort löschen?',
         'reply_label'             => 'Als Autor antworten',
-        'reply_placeholder'       => 'Antwort schreiben...',
+        'reply_placeholder'       => 'Antwort schreiben …',
         'send_reply_btn'          => 'Antwort senden',
         'prev_btn'                => 'Zurück',
         'next_btn'                => 'Weiter',
@@ -66,7 +66,7 @@ return [
     ],
 
     'settings' => [
-        'title'                    => 'Kommentare Einstellungen',
+        'title'                    => 'Comments-Einstellungen',
         'heading'                  => 'Einstellungen',
         'back_btn'                 => 'Zurück zu Kommentaren',
         'updates_btn'              => 'Updates',
@@ -103,8 +103,6 @@ return [
         'field_smtp_enc'           => 'Verschlüsselung',
         'field_smtp_user'          => 'SMTP-Benutzername',
         'field_smtp_pwd'           => 'SMTP-Passwort',
-        'field_smtp_debug'         => 'SMTP-Debug-Protokollierung aktivieren',
-        'smtp_debug_heading'       => 'SMTP-Debug-Protokoll',
         'field_language'           => 'Admin-Sprache',
         'email_none'               => 'Keine',
         'email_ses'                => 'Amazon SES',
@@ -139,8 +137,8 @@ return [
     ],
 
     'setup' => [
-        'title'                    => 'Pure Comments Einrichtung',
-        'heading'                  => 'Pure Comments Einrichtung',
+        'title'                    => 'Pure-Comments-Einrichtung',
+        'heading'                  => 'Pure-Comments-Einrichtung',
         'errors_heading'           => 'Einrichtungsfehler:',
         'submit_btn'               => 'Konfiguration und Datenbank erstellen',
         'section_language'         => 'Sprache',
@@ -188,7 +186,7 @@ return [
     ],
 
     'updates' => [
-        'title'                     => 'Kommentare Updates',
+        'title'                     => 'Comments-Updates',
         'heading'                   => 'Updates',
         'back_btn'                  => 'Zurück zu Einstellungen',
         'logout_btn'                => 'Abmelden',
@@ -236,7 +234,7 @@ return [
         'err_restore_failed'        => 'Wiederherstellung fehlgeschlagen: {error}',
         'err_delete_failed'         => 'Löschen fehlgeschlagen: {error}',
         'err_backup_create'         => 'Lokales Backup-Verzeichnis unter /backup konnte nicht erstellt werden.',
-        'err_invalid_package'       => 'Release-Archiv ist kein gültiges Pure Comments-Paket.',
+        'err_invalid_package'       => 'Release-Archiv ist kein gültiges Pure-Comments-Paket.',
         'err_update_rollback'       => 'Update fehlgeschlagen und Rollback ebenfalls fehlgeschlagen: {error}',
         'err_update_rolled_back'    => 'Update fehlgeschlagen und wurde zurückgesetzt: {error}',
         'err_curl_init'             => 'Curl konnte nicht initialisiert werden.',
@@ -257,7 +255,7 @@ return [
         'title'          => 'Kommentare',
         'unavailable'    => 'Kommentare nicht verfügbar.',
         'load_btn'       => 'Kommentare laden',
-        'loading'        => '💭 Kommentare werden geladen…',
+        'loading'        => '💭 Kommentare werden geladen …',
         'load_error'     => 'Kommentare konnten nicht geladen werden.',
         'no_comments'    => 'Noch keine Kommentare.',
         'author_badge'   => 'Admin',
@@ -270,7 +268,7 @@ return [
         'field_email'    => 'E-Mail (optional)',
         'field_website'  => 'Website (optional)',
         'field_comment'  => 'Kommentar (Markdown unterstützt)',
-        'submitting'     => 'Wird gesendet…',
+        'submitting'     => 'Wird gesendet …',
         'submit_btn'     => 'Kommentar absenden',
         'submit_success' => 'Danke! Dein Kommentar wartet auf Moderation.',
         'submit_error'   => 'Hoppla! Beim Absenden deines Kommentars ist ein Problem aufgetreten.',
@@ -282,11 +280,11 @@ return [
     ],
 
     'notifications' => [
-        'reply_subject'      => 'Jemand hat auf Ihren Kommentar geantwortet',
+        'reply_subject'      => 'Jemand hat auf deinen Kommentar geantwortet',
         'reply_body'         => "Hallo {recipient},\n\n{replier} hat auf deinen Kommentar zum Beitrag \"{post}\" geantwortet.\n\nAntwort:\n{reply}\n\nZur Antwort: {url}",
         'moderation_subject' => 'Neuer Kommentar wartet auf Moderation',
         'moderation_body'    => "Neuer Kommentar zur Überprüfung\n\nBeitrag: {post}\nName: {name}\nInhalt:\n{content}\n\nModerieren: {url}",
         'test_subject'       => 'Pure Comments: Test-E-Mail',
-        'test_body'          => 'Dies ist eine Test-E-Mail von Pure Comments, um zu bestätigen, dass Ihre E-Mail-Benachrichtigungen korrekt funktionieren.',
+        'test_body'          => 'Dies ist eine Test-E-Mail von Pure Comments, um zu bestätigen, dass deine E-Mail-Benachrichtigungen korrekt funktionieren.',
     ],
 ];
