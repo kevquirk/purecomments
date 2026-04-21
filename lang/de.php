@@ -10,10 +10,10 @@ return [
         'username'             => 'Benutzername',
         'password'             => 'Passwort',
         'submit'               => 'Anmelden',
-        'setup_complete'       => 'Einrichtung abgeschlossen. Melden Sie sich an, um Kommentare zu moderieren.',
+        'setup_complete'       => 'Einrichtung abgeschlossen. Melde dich an, um Kommentare zu moderieren.',
         'setup_cleanup_failed' => 'Automatische Bereinigung fehlgeschlagen. Löschen oder sperren Sie /setup.php manuell.',
         'err_required'         => 'Benutzername und Passwort sind erforderlich.',
-        'err_rate_limited'     => 'Zu viele fehlgeschlagene Versuche. Versuchen Sie es in {seconds} Sekunden erneut.',
+        'err_rate_limited'     => 'Zu viele fehlgeschlagene Versuche. Versuche es in {seconds} Sekunden erneut.',
         'err_invalid'          => 'Ungültige Anmeldedaten.',
     ],
 
@@ -119,7 +119,7 @@ return [
         'err_date_format'          => 'Datumsformat ist erforderlich.',
         'err_challenge_question'   => 'Sicherheitsfrage ist erforderlich.',
         'err_challenge_answer'     => 'Sicherheitsantwort ist erforderlich.',
-        'err_password_empty'       => 'Geben Sie ein neues Admin-Passwort ein, um die Anmeldedaten zu ändern.',
+        'err_password_empty'       => 'Gib ein neues Admin-Passwort ein, um die Anmeldedaten zu ändern.',
         'err_password_length'      => 'Admin-Passwort muss mindestens 10 Zeichen lang sein.',
         'err_passwords_match'      => 'Admin-Passwörter stimmen nicht überein.',
         'err_author_name'          => 'Autorenname ist erforderlich.',
@@ -132,8 +132,8 @@ return [
         'err_smtp_port'            => 'SMTP-Port muss eine Zahl sein.',
         'err_smtp_enc'             => 'SMTP-Verschlüsselung muss tls, ssl oder none sein.',
         'err_no_notify_email'      => 'Keine Benachrichtigungs-E-Mail-Adresse konfiguriert.',
-        'err_test_email'           => 'Test-E-Mail konnte nicht gesendet werden. Überprüfen Sie Ihre E-Mail-Einstellungen und Server-Fehlerprotokolle.',
-        'err_save_config'          => 'config.php konnte nicht gespeichert werden. Überprüfen Sie die Dateisystemberechtigungen.',
+        'err_test_email'           => 'Test-E-Mail konnte nicht gesendet werden. Überprüfe deine E-Mail-Einstellungen und Server-Fehlerprotokolle.',
+        'err_save_config'          => 'config.php konnte nicht gespeichert werden. Überprüfe die Dateisystemberechtigungen.',
     ],
 
     'setup' => [
@@ -182,7 +182,7 @@ return [
         'err_smtp_host'            => 'SMTP-Host ist erforderlich.',
         'err_smtp_port'            => 'SMTP-Port muss eine Zahl sein.',
         'err_smtp_enc'             => 'SMTP-Verschlüsselung muss tls, ssl oder none sein.',
-        'err_save_config'          => 'config.php konnte nicht geschrieben werden. Überprüfen Sie die Dateisystemberechtigungen.',
+        'err_save_config'          => 'config.php konnte nicht geschrieben werden. Überprüfe die Dateisystemberechtigungen.',
     ],
 
     'updates' => [
@@ -243,9 +243,9 @@ return [
         'err_github_json'           => 'GitHub hat ungültiges JSON zurückgegeben.',
         'err_curl_download'         => 'Download fehlgeschlagen (HTTP {status}).',
         'err_curl_download_net'     => 'Download fehlgeschlagen (Netzwerk nicht verfügbar oder allow_url_fopen deaktiviert).',
-        'err_please_choose_restore' => 'Bitte wählen Sie ein Backup zur Wiederherstellung aus.',
-        'err_please_choose_delete'  => 'Bitte wählen Sie ein Backup zum Löschen aus.',
-        'msg_already_latest'        => 'Sie verwenden bereits die neueste Version ({version}).',
+        'err_please_choose_restore' => 'Bitte wähle ein Backup zur Wiederherstellung aus.',
+        'err_please_choose_delete'  => 'Bitte wähle ein Backup zum Löschen aus.',
+        'msg_already_latest'        => 'Du verwendest bereits die neueste Version ({version}).',
         'msg_backup_restored'       => 'Backup erfolgreich wiederhergestellt.',
         'msg_backup_deleted'        => 'Backup erfolgreich gelöscht.',
         'msg_update_applied'        => 'Update erfolgreich angewendet.',
@@ -270,18 +270,18 @@ return [
         'field_comment'  => 'Kommentar (Markdown unterstützt)',
         'submitting'     => 'Wird gesendet…',
         'submit_btn'     => 'Kommentar absenden',
-        'submit_success' => 'Danke! Ihr Kommentar wartet auf Moderation.',
-        'submit_error'   => 'Hoppla! Beim Absenden Ihres Kommentars ist ein Problem aufgetreten.',
+        'submit_success' => 'Danke! Dein Kommentar wartet auf Moderation.',
+        'submit_error'   => 'Hoppla! Beim Absenden deines Kommentars ist ein Problem aufgetreten.',
     ],
 
     'api' => [
-        'comment_awaiting' => 'Ihr Kommentar wartet auf Moderation.',
-        'rate_limited'     => 'Zu viele Anfragen. Bitte warten Sie, bevor Sie es erneut versuchen.',
+        'comment_awaiting' => 'Dein Kommentar wartet auf Moderation.',
+        'rate_limited'     => 'Zu viele Anfragen. Bitte warte, bevor du es erneut versuchst.',
     ],
 
     'notifications' => [
         'reply_subject'      => 'Jemand hat auf Ihren Kommentar geantwortet',
-        'reply_body'         => "Hallo {recipient},\n\n{replier} hat auf Ihren Kommentar zum Beitrag \"{post}\" geantwortet.\n\nAntwort:\n{reply}\n\nZur Antwort: {url}",
+        'reply_body'         => "Hallo {recipient},\n\n{replier} hat auf deinen Kommentar zum Beitrag \"{post}\" geantwortet.\n\nAntwort:\n{reply}\n\nZur Antwort: {url}",
         'moderation_subject' => 'Neuer Kommentar wartet auf Moderation',
         'moderation_body'    => "Neuer Kommentar zur Überprüfung\n\nBeitrag: {post}\nName: {name}\nInhalt:\n{content}\n\nModerieren: {url}",
         'test_subject'       => 'Pure Comments: Test-E-Mail',
