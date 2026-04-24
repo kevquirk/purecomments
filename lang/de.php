@@ -9,6 +9,7 @@ return [
         'heading'              => 'Comments-Admin-Anmeldung',
         'username'             => 'Benutzername',
         'password'             => 'Passwort',
+        'remember_me'          => 'Angemeldet bleiben',
         'submit'               => 'Anmelden',
         'setup_complete'       => 'Einrichtung abgeschlossen. Melde dich an, um Kommentare zu moderieren.',
         'setup_cleanup_failed' => 'Automatische Bereinigung fehlgeschlagen. Lösche oder sperre /setup.php manuell.',

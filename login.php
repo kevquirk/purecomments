@@ -16,6 +16,8 @@ require __DIR__ . '/includes/admin_auth.php';
 require_once __DIR__ . '/includes/i18n.php';
 pc_set_language((string)($config['language'] ?? 'en'));
 
+maybe_restore_admin_from_cookie($config);
+
 if (is_admin_logged_in($config)) {
     header('Location: ' . pc_url('/', $config), true, 302);
     exit;
@@ -39,6 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($username === '' || $password === '') {
         $error = t('login.err_required');
     } elseif (attempt_admin_login($config, $username, $password)) {
+        if (!empty($_POST['remember_me'])) {
+            set_remember_me_cookie($config);
+        }
         header('Location: ' . pc_url('/', $config), true, 302);
         exit;
     } else {
@@ -77,6 +82,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <label for="password"><?php echo htmlspecialchars(t('login.password'), ENT_QUOTES, 'UTF-8'); ?></label>
             <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+            <label class="checkbox-label">
+                <input type="checkbox" name="remember_me" value="1">
+                <?php echo htmlspecialchars(t('login.remember_me'), ENT_QUOTES, 'UTF-8'); ?>
+            </label>
 
             <button type="submit">
                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo htmlspecialchars(pc_url('/public/icons/sprite.svg', $config), ENT_QUOTES, 'UTF-8'); ?>#icon-login"></use></svg>

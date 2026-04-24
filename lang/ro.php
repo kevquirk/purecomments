@@ -12,6 +12,7 @@ return [
         'heading'              => 'Autentificare admin comentarii',
         'username'             => 'Utilizator',
         'password'             => 'Parolă',
+        'remember_me'          => 'Ține-mă minte',
         'submit'               => 'Conectare',
         'setup_complete'       => 'Configurarea s-a finalizat. Conectați-vă pentru a începe moderarea comentariilor.',
         'setup_cleanup_failed' => 'Curățarea automată a eșuat. Ștergeți sau blocați /setup.php manual.',

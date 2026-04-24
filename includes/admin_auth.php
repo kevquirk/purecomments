@@ -3,8 +3,46 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/url.php';
 
+function remember_me_token(array $config): string
+{
+    return hash_hmac('sha256', 'purecomments_remember_me', $config['admin_password_hash'] ?? '');
+}
+
+function set_remember_me_cookie(array $config): void
+{
+    $https = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
+    setcookie('pc_remember', remember_me_token($config), [
+        'expires'  => time() + (90 * 24 * 60 * 60),
+        'path'     => '/',
+        'secure'   => $https,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+}
+
+function clear_remember_me_cookie(): void
+{
+    setcookie('pc_remember', '', ['expires' => time() - 3600, 'path' => '/']);
+}
+
+function maybe_restore_admin_from_cookie(array $config): void
+{
+    if (is_admin_logged_in($config)) {
+        return;
+    }
+    $cookie = $_COOKIE['pc_remember'] ?? '';
+    if ($cookie === '') {
+        return;
+    }
+    if (hash_equals(remember_me_token($config), $cookie)) {
+        $_SESSION['admin_logged_in'] = true;
+        $_SESSION['admin_username'] = $config['admin_username'] ?? '';
+    }
+}
+
 function require_admin_login(array $config): void
 {
+    maybe_restore_admin_from_cookie($config);
     if (!is_admin_logged_in($config)) {
         header('Location: ' . pc_url('/login.php', $config), true, 302);
         exit;
@@ -55,6 +93,7 @@ function is_admin_logged_in(array $config): bool
 
 function admin_logout(): void
 {
+    clear_remember_me_cookie();
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
         $params = session_get_cookie_params();

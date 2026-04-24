@@ -9,6 +9,7 @@ return [
         'heading'              => 'Comments Admin Login',
         'username'             => 'Username',
         'password'             => 'Password',
+        'remember_me'          => 'Remember me',
         'submit'               => 'Sign in',
         'setup_complete'       => 'Setup complete. Sign in to start moderating comments.',
         'setup_cleanup_failed' => 'Automatic cleanup failed. Delete or block /setup.php manually.',
