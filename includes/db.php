@@ -130,16 +130,23 @@ function fetch_comments_by_status(
     string $status,
     string $direction = 'ASC',
     ?int $limit = null,
-    int $offset = 0
+    int $offset = 0,
+    ?string $slug = null
 ): array
 {
     $pdo = db($config);
     $direction = strtoupper($direction) === 'DESC' ? 'DESC' : 'ASC';
     $offset = max(0, $offset);
-    $sql = 
+
+    $where = 'WHERE status = :status';
+    if ($slug !== null && $slug !== '') {
+        $where .= ' AND post_slug = :slug';
+    }
+
+    $sql =
         "SELECT id, post_slug, parent_id, name, email, website, content_md, content_html, created_at, status
          FROM comments
-         WHERE status = :status
+         {$where}
          ORDER BY created_at {$direction}";
 
     if ($limit !== null) {
@@ -149,6 +156,9 @@ function fetch_comments_by_status(
 
     $stmt = $pdo->prepare($sql);
     $stmt->bindValue(':status', $status, PDO::PARAM_STR);
+    if ($slug !== null && $slug !== '') {
+        $stmt->bindValue(':slug', $slug, PDO::PARAM_STR);
+    }
     if ($limit !== null) {
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
@@ -163,14 +173,14 @@ function fetch_comments_by_status(
     return $rows;
 }
 
-function fetch_pending_comments(array $config, ?int $limit = null, int $offset = 0): array
+function fetch_pending_comments(array $config, ?int $limit = null, int $offset = 0, ?string $slug = null): array
 {
-    return fetch_comments_by_status($config, 'pending', 'ASC', $limit, $offset);
+    return fetch_comments_by_status($config, 'pending', 'ASC', $limit, $offset, $slug);
 }
 
-function fetch_published_comments_admin(array $config, ?int $limit = null, int $offset = 0): array
+function fetch_published_comments_admin(array $config, ?int $limit = null, int $offset = 0, ?string $slug = null): array
 {
-    return fetch_comments_by_status($config, 'published', 'DESC', $limit, $offset);
+    return fetch_comments_by_status($config, 'published', 'DESC', $limit, $offset, $slug);
 }
 
 function count_comments_by_status(array $config, string $status): int

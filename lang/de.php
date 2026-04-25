@@ -39,6 +39,9 @@ return [
         'err_reply_empty'       => 'Antwortinhalt darf nicht leer sein.',
         'err_pub_for_reply'     => 'Kommentar konnte vor der Antwort nicht veröffentlicht werden.',
         'err_save_reply'        => 'Antwort konnte nicht gespeichert werden.',
+        'filter_active'             => 'Gefiltert nach Beitrag: {title}',
+        'filter_commenter_active'   => 'Gefiltert nach Kommentator: {name}',
+        'filter_clear_btn'          => 'Filter löschen',
     ],
 
     'comments' => [
@@ -64,6 +67,8 @@ return [
         'prev_btn'                => 'Zurück',
         'next_btn'                => 'Weiter',
         'no_content'              => '[Kein Inhalt]',
+        'filter_link'             => 'Nach diesem Beitrag filtern',
+        'filter_commenter_link'   => 'Nach diesem Kommentator filtern',
     ],
 
     'settings' => [

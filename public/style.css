@@ -45,6 +45,7 @@
   --input-bg: #fafafa;
   --border: #222;
   --red: #af2e1b;
+  --green: #1B5E20;
   --font: "Iosevka", ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
   --standard-border: 2px solid var(--border);
 }
@@ -59,6 +60,7 @@
       --input-bg: #111;
       --border: #ccc;
       --red: #ff8a80;
+      --green: #A3BE8C;
     }
 }
 
@@ -275,26 +277,29 @@ a.button:hover {
     display: none;
 }
 
-.admin-reply label,
-.admin-form label {
+.admin-reply label:not(.checkbox-label),
+.admin-form label:not(.checkbox-label) {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
     font-weight: 600;
 }
 
-.admin-form .inline-checkbox {
+.admin-form .inline-checkbox,
+.checkbox-label {
     display: inline-flex;
     flex-direction: row;
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 1rem;
+    font-weight: normal;
+    cursor: pointer;
 }
 
-.admin-form .inline-checkbox input[type="checkbox"] {
+.admin-form .inline-checkbox input[type="checkbox"],
+.checkbox-label input[type="checkbox"] {
     width: auto;
     margin: 0;
-    vertical-align: middle;
 }
 
 .smtp-debug-log {
@@ -564,4 +569,33 @@ a.button:hover {
   border: 2px solid;
   padding: 0.5rem;
   text-align: center;
+}
+
+.notice.success,
+.notice.filter-active {
+    border: 2px solid var(--green);
+    background: #eff7ef;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+    .notice.success,
+    .notice.filter-active {
+        background: rgba(163, 190, 140, 0.1);
+    }
+}
+
+.notice.filter-active {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.post-filter-link,
+.commenter-filter-link {
+    font-size: 0.8rem;
+    white-space: nowrap;
 }

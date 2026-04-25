@@ -31,6 +31,22 @@ $errors = [];
 $perPage = 20;
 $pendingPage = max(1, (int)($_GET['pending_page'] ?? $_POST['pending_page'] ?? 1));
 $publishedPage = max(1, (int)($_GET['published_page'] ?? $_POST['published_page'] ?? 1));
+$filterSlug = '';
+if (!empty($_GET['slug']) && validate_post_slug((string)$_GET['slug'])) {
+    $filterSlug = (string)$_GET['slug'];
+}
+$commenterRefId = 0;
+$commenterRef = null;
+if (!empty($_GET['commenter']) && ctype_digit((string)$_GET['commenter'])) {
+    $id = (int)$_GET['commenter'];
+    if ($id > 0) {
+        $ref = fetch_comment_by_id($config, $id);
+        if ($ref !== null) {
+            $commenterRefId = $id;
+            $commenterRef = $ref;
+        }
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $token = $_POST['csrf_token'] ?? '';
@@ -103,8 +119,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$pendingAllComments = fetch_pending_comments($config);
-$publishedAllComments = fetch_published_comments_admin($config);
+$slugFilter = $filterSlug !== '' ? $filterSlug : null;
+$pendingAllComments = fetch_pending_comments($config, null, 0, $slugFilter);
+$publishedAllComments = fetch_published_comments_admin($config, null, 0, $slugFilter);
+
+if ($commenterRef !== null) {
+    $pendingAllComments = filter_comments_by_commenter($pendingAllComments, $commenterRef);
+    $publishedAllComments = filter_comments_by_commenter($publishedAllComments, $commenterRef);
+}
 
 [$pendingComments, $pendingPage, $pendingPages] = paginate_comments_for_admin_view(
     $pendingAllComments,
@@ -151,16 +173,32 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
             <p class="notice error"><?php echo e($error); ?></p>
         <?php endforeach; ?>
 
+        <?php if ($filterSlug !== ''): ?>
+            <?php $clearPostUrl = $commenterRefId > 0 ? pc_url('/', $config) . '?commenter=' . $commenterRefId : pc_url('/', $config); ?>
+            <p class="notice filter-active">
+                <?php echo e(t('dashboard.filter_active', ['title' => resolve_post_title($filterSlug, $config)])); ?>
+                <a href="<?php echo e($clearPostUrl); ?>"><?php echo e(t('dashboard.filter_clear_btn')); ?></a>
+            </p>
+        <?php endif; ?>
+
+        <?php if ($commenterRef !== null): ?>
+            <?php $clearCommenterUrl = $filterSlug !== '' ? pc_url('/', $config) . '?slug=' . rawurlencode($filterSlug) : pc_url('/', $config); ?>
+            <p class="notice filter-active">
+                <?php echo e(t('dashboard.filter_commenter_active', ['name' => $commenterRef['name']])); ?>
+                <a href="<?php echo e($clearCommenterUrl); ?>"><?php echo e(t('dashboard.filter_clear_btn')); ?></a>
+            </p>
+        <?php endif; ?>
+
         <section class="admin-section" id="pending-comments">
             <h2><?php echo e(t('dashboard.pending_heading')); ?></h2>
-            <?php echo render_admin_comments_table($pendingComments, $csrfToken, $config, 'pending', $pendingPage, $publishedPage); ?>
-            <?php echo render_admin_pagination($pendingPage, $pendingPages, 'pending', $pendingPage, $publishedPage); ?>
+            <?php echo render_admin_comments_table($pendingComments, $csrfToken, $config, 'pending', $pendingPage, $publishedPage, $filterSlug, $commenterRefId); ?>
+            <?php echo render_admin_pagination($pendingPage, $pendingPages, 'pending', $pendingPage, $publishedPage, $filterSlug, $commenterRefId); ?>
         </section>
 
         <section class="admin-section" id="published-comments">
             <h2><?php echo e(t('dashboard.published_heading')); ?></h2>
-            <?php echo render_admin_comments_table($publishedComments, $csrfToken, $config, 'published', $pendingPage, $publishedPage); ?>
-            <?php echo render_admin_pagination($publishedPage, $publishedPages, 'published', $pendingPage, $publishedPage); ?>
+            <?php echo render_admin_comments_table($publishedComments, $csrfToken, $config, 'published', $pendingPage, $publishedPage, $filterSlug, $commenterRefId); ?>
+            <?php echo render_admin_pagination($publishedPage, $publishedPages, 'published', $pendingPage, $publishedPage, $filterSlug, $commenterRefId); ?>
         </section>
     </main>
     <script>
@@ -274,4 +312,20 @@ function collect_thread_replies_for_render(int $parentId, array $repliesByParent
     }
 
     return $out;
+}
+
+function filter_comments_by_commenter(array $comments, array $ref): array
+{
+    $email = $ref['email_plain'] ?? '';
+    $name = (string)($ref['name'] ?? '');
+
+    if ($email !== '') {
+        return array_values(array_filter($comments, static function (array $c) use ($email): bool {
+            return strcasecmp((string)($c['email_plain'] ?? ''), $email) === 0;
+        }));
+    }
+
+    return array_values(array_filter($comments, static function (array $c) use ($name): bool {
+        return strcasecmp((string)($c['name'] ?? ''), $name) === 0;
+    }));
 }

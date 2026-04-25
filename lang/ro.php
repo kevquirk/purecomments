@@ -42,6 +42,9 @@ return [
         'err_reply_empty'       => 'Răspunsul nu poate fi gol.',
         'err_pub_for_reply'     => 'Nu s-a putut publica comentariul înainte de a răspunde.',
         'err_save_reply'        => 'Nu s-a putut salva răspunsul.',
+        'filter_active'             => 'Filtrat după postare: {title}',
+        'filter_commenter_active'   => 'Filtrat după comentator: {name}',
+        'filter_clear_btn'          => 'Șterge filtrul',
     ],
 
     'comments' => [
@@ -67,6 +70,8 @@ return [
         'prev_btn'                => 'Anterior',
         'next_btn'                => 'Următor',
         'no_content'              => '[Fără conținut]',
+        'filter_link'             => 'Filtrează după această postare',
+        'filter_commenter_link'   => 'Filtrează după acest comentator',
     ],
 
     'settings' => [

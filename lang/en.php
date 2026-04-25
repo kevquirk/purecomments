@@ -39,6 +39,9 @@ return [
         'err_reply_empty'       => 'Reply content cannot be empty.',
         'err_pub_for_reply'     => 'Unable to publish comment before replying.',
         'err_save_reply'        => 'Unable to save reply.',
+        'filter_active'             => 'Filtered by post: {title}',
+        'filter_commenter_active'   => 'Filtered by commenter: {name}',
+        'filter_clear_btn'          => 'Clear filter',
     ],
 
     'comments' => [
@@ -64,6 +67,8 @@ return [
         'prev_btn'                => 'Previous',
         'next_btn'                => 'Next',
         'no_content'              => '[No content]',
+        'filter_link'             => 'Filter by this post',
+        'filter_commenter_link'   => 'Filter by this commenter',
     ],
 
     'settings' => [

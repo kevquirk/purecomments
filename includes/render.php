@@ -51,7 +51,9 @@ function render_admin_comments_table(
     array $config,
     string $context,
     int $pendingPage,
-    int $publishedPage
+    int $publishedPage,
+    string $filterSlug = '',
+    int $commenterRefId = 0
 ): string
 {
     [$primaryComments, $repliesByParent] = split_admin_comments_for_admin_view($comments, $config);
@@ -94,6 +96,9 @@ function render_admin_comments_table(
                             <?php if (!empty($comment['email_plain'])) : ?>
                                 <span class="comment-author-email"><?php echo e($comment['email_plain']); ?></span>
                             <?php endif; ?>
+                            <?php if ($commenterRefId === 0) : ?>
+                                <a href="?commenter=<?php echo e((string)$comment['id']); ?>" class="commenter-filter-link"><?php echo e(t('comments.filter_commenter_link')); ?></a>
+                            <?php endif; ?>
                         </span>
                         <span class="comment-summary-preview"><?php echo e(admin_comment_preview_text($comment['content_html'])); ?></span>
                         <span class="comment-summary-response">
@@ -103,6 +108,9 @@ function render_admin_comments_table(
                             <a href="<?php echo e($postUrl); ?>" target="_blank" rel="noopener">
                                 <?php echo e($postTitle); ?>
                             </a>
+                            <?php if ($filterSlug !== $comment['post_slug']) : ?>
+                                <a href="?slug=<?php echo e(rawurlencode($comment['post_slug'])); ?>" class="post-filter-link"><?php echo e(t('comments.filter_link')); ?></a>
+                            <?php endif; ?>
                         </span>
                         <time datetime="<?php echo e(str_replace(' ', 'T', $comment['created_at']) . 'Z'); ?>">
                             <?php echo e(format_admin_datetime($comment['created_at'], $config)); ?>
@@ -326,7 +334,9 @@ function render_admin_pagination(
     int $totalPages,
     string $target,
     int $pendingPage,
-    int $publishedPage
+    int $publishedPage,
+    string $filterSlug = '',
+    int $commenterRefId = 0
 ): string
 {
     if ($totalPages <= 1) {
@@ -338,11 +348,17 @@ function render_admin_pagination(
     $windowStart = max(1, $currentPage - 2);
     $windowEnd = min($totalPages, $currentPage + 2);
 
-    $buildHref = static function (int $page) use ($targetIsPending, $pendingPage, $publishedPage, $anchor): string {
+    $buildHref = static function (int $page) use ($targetIsPending, $pendingPage, $publishedPage, $anchor, $filterSlug, $commenterRefId): string {
         $query = [
             'pending_page' => $targetIsPending ? $page : $pendingPage,
             'published_page' => $targetIsPending ? $publishedPage : $page,
         ];
+        if ($filterSlug !== '') {
+            $query['slug'] = $filterSlug;
+        }
+        if ($commenterRefId > 0) {
+            $query['commenter'] = $commenterRefId;
+        }
         return '?' . http_build_query($query) . $anchor;
     };
 
