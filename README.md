@@ -32,7 +32,7 @@ It provides:
 - Auto-publish pending comment when replying as author
 - Thread delete from root comment (`Delete thread` removes descendants)
 - Admin pagination (20 primary threads per page)
-- Admin update manager (check GitHub release, inspect package changes, apply update, restore backup)
+- Admin update manager (check Codeberg release, inspect package changes, apply update, restore backup)
 - Login rate limiting (5 failed attempts in 5 minutes)
 - Session hardening (`HttpOnly`, `SameSite`, strict mode, secure-on-HTTPS)
 

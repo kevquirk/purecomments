@@ -26,10 +26,10 @@ const PURECOMMENTS_BASE_PATH = __DIR__;
 
 function fetch_latest_purecomments_release(): array
 {
-    $endpoint = 'https://api.github.com/repos/kevquirk/purecomments/releases/latest';
+    $endpoint = 'https://codeberg.org/api/v1/repos/kevquirk/purecomments/releases/latest';
     $headers = [
         'User-Agent: PureComments-Updates-Check',
-        'Accept: application/vnd.github+json',
+        'Accept: application/json',
     ];
 
     if (function_exists('curl_init')) {
@@ -74,7 +74,7 @@ function fetch_latest_purecomments_release(): array
         'ok' => true,
         'tag' => (string) ($json['tag_name'] ?? ''),
         'name' => (string) ($json['name'] ?? ''),
-        'url' => (string) ($json['html_url'] ?? 'https://github.com/kevquirk/purecomments/releases'),
+        'url' => (string) ($json['html_url'] ?? 'https://codeberg.org/kevquirk/purecomments/releases'),
         'zipball_url' => (string) ($json['zipball_url'] ?? ''),
         'published_at' => (string) ($json['published_at'] ?? ''),
     ];
@@ -852,7 +852,7 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
                     (<code><?php echo h($latestBackup); ?></code>)
                 </p>
             <?php endif; ?>
-            <p><strong><?php echo h(t('updates.repository')); ?></strong> <a href="https://github.com/kevquirk/purecomments" target="_blank" rel="noopener noreferrer">github.com/kevquirk/purecomments</a></p>
+            <p><strong><?php echo h(t('updates.repository')); ?></strong> <a href="https://codeberg.org/kevquirk/purecomments" target="_blank" rel="noopener noreferrer">codeberg.org/kevquirk/purecomments</a></p>
             <p>
                 <a class="button" href="<?php echo h(pc_url('/updates.php', $config)); ?>?check=1">
                     <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-upgrade"></use></svg>
@@ -873,7 +873,7 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
                 <?php if (($latest['published_at'] ?? '') !== '') : ?>
                     <p><strong><?php echo h(t('updates.published_label')); ?></strong> <?php echo h((string) date('Y-m-d', strtotime((string) $latest['published_at']))); ?></p>
                 <?php endif; ?>
-                <p><a href="<?php echo h((string) ($latest['url'] ?? 'https://github.com/kevquirk/purecomments/releases')); ?>" target="_blank" rel="noopener noreferrer"><?php echo h(t('updates.release_notes')); ?></a></p>
+                <p><a href="<?php echo h((string) ($latest['url'] ?? 'https://codeberg.org/kevquirk/purecomments/releases')); ?>" target="_blank" rel="noopener noreferrer"><?php echo h(t('updates.release_notes')); ?></a></p>
             <?php endif; ?>
         </section>
 
