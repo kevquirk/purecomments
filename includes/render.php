@@ -336,7 +336,8 @@ function render_admin_pagination(
     int $pendingPage,
     int $publishedPage,
     string $filterSlug = '',
-    int $commenterRefId = 0
+    int $commenterRefId = 0,
+    string $searchQuery = ''
 ): string
 {
     if ($totalPages <= 1) {
@@ -348,7 +349,7 @@ function render_admin_pagination(
     $windowStart = max(1, $currentPage - 2);
     $windowEnd = min($totalPages, $currentPage + 2);
 
-    $buildHref = static function (int $page) use ($targetIsPending, $pendingPage, $publishedPage, $anchor, $filterSlug, $commenterRefId): string {
+    $buildHref = static function (int $page) use ($targetIsPending, $pendingPage, $publishedPage, $anchor, $filterSlug, $commenterRefId, $searchQuery): string {
         $query = [
             'pending_page' => $targetIsPending ? $page : $pendingPage,
             'published_page' => $targetIsPending ? $publishedPage : $page,
@@ -358,6 +359,9 @@ function render_admin_pagination(
         }
         if ($commenterRefId > 0) {
             $query['commenter'] = $commenterRefId;
+        }
+        if ($searchQuery !== '') {
+            $query['q'] = $searchQuery;
         }
         return '?' . http_build_query($query) . $anchor;
     };

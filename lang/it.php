@@ -42,6 +42,11 @@ return [
         'filter_active'             => 'Filtrato per post: {title}',
         'filter_commenter_active'   => 'Filtrato per commentatore: {name}',
         'filter_clear_btn'          => 'Pulisci filtro',
+        'search_label'              => 'Search comments', // ENGLISH PLACEHOLDER
+        'search_placeholder'        => 'Search by name or content…', // ENGLISH PLACEHOLDER
+        'search_btn'                => 'Search', // ENGLISH PLACEHOLDER
+        'search_active'             => 'Showing results for: {query}', // ENGLISH PLACEHOLDER
+        'search_clear_btn'          => 'Clear search', // ENGLISH PLACEHOLDER
     ],
 
     'comments' => [

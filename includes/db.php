@@ -131,7 +131,8 @@ function fetch_comments_by_status(
     string $direction = 'ASC',
     ?int $limit = null,
     int $offset = 0,
-    ?string $slug = null
+    ?string $slug = null,
+    ?string $search = null
 ): array
 {
     $pdo = db($config);
@@ -141,6 +142,9 @@ function fetch_comments_by_status(
     $where = 'WHERE status = :status';
     if ($slug !== null && $slug !== '') {
         $where .= ' AND post_slug = :slug';
+    }
+    if ($search !== null && $search !== '') {
+        $where .= ' AND (name LIKE :search OR content_md LIKE :search)';
     }
 
     $sql =
@@ -159,6 +163,9 @@ function fetch_comments_by_status(
     if ($slug !== null && $slug !== '') {
         $stmt->bindValue(':slug', $slug, PDO::PARAM_STR);
     }
+    if ($search !== null && $search !== '') {
+        $stmt->bindValue(':search', '%' . $search . '%', PDO::PARAM_STR);
+    }
     if ($limit !== null) {
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
@@ -173,14 +180,14 @@ function fetch_comments_by_status(
     return $rows;
 }
 
-function fetch_pending_comments(array $config, ?int $limit = null, int $offset = 0, ?string $slug = null): array
+function fetch_pending_comments(array $config, ?int $limit = null, int $offset = 0, ?string $slug = null, ?string $search = null): array
 {
-    return fetch_comments_by_status($config, 'pending', 'ASC', $limit, $offset, $slug);
+    return fetch_comments_by_status($config, 'pending', 'ASC', $limit, $offset, $slug, $search);
 }
 
-function fetch_published_comments_admin(array $config, ?int $limit = null, int $offset = 0, ?string $slug = null): array
+function fetch_published_comments_admin(array $config, ?int $limit = null, int $offset = 0, ?string $slug = null, ?string $search = null): array
 {
-    return fetch_comments_by_status($config, 'published', 'DESC', $limit, $offset, $slug);
+    return fetch_comments_by_status($config, 'published', 'DESC', $limit, $offset, $slug, $search);
 }
 
 function count_comments_by_status(array $config, string $status): int

@@ -45,6 +45,11 @@ return [
         'filter_active'             => 'Filtrat după postare: {title}',
         'filter_commenter_active'   => 'Filtrat după comentator: {name}',
         'filter_clear_btn'          => 'Șterge filtrul',
+        'search_label'              => 'Search comments', // ENGLISH PLACEHOLDER
+        'search_placeholder'        => 'Search by name or content…', // ENGLISH PLACEHOLDER
+        'search_btn'                => 'Search', // ENGLISH PLACEHOLDER
+        'search_active'             => 'Showing results for: {query}', // ENGLISH PLACEHOLDER
+        'search_clear_btn'          => 'Clear search', // ENGLISH PLACEHOLDER
     ],
 
     'comments' => [

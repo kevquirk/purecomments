@@ -263,11 +263,13 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?php echo h(t('settings.title')); ?></title>
+    <link rel="icon" type="image/png" href="<?php echo h(pc_url('/public/favicon.png', $config)); ?>">
     <link rel="stylesheet" href="<?php echo h(pc_url('/public/style.css', $config)); ?>?v=<?php echo h((string)$styleVersion); ?>">
 </head>
 <body class="admin">
     <main class="admin-container">
         <div class="admin-top-actions">
+            <span class="admin-logo"><span class="pure">PURE</span><span class="service">COMMENTS</span></span>
             <a class="button" href="<?php echo h(pc_url('/', $config)); ?>">
                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-back"></use></svg>
                 <span><?php echo h(t('settings.back_btn')); ?></span>

@@ -35,6 +35,14 @@ $filterSlug = '';
 if (!empty($_GET['slug']) && validate_post_slug((string)$_GET['slug'])) {
     $filterSlug = (string)$_GET['slug'];
 }
+$searchQuery = '';
+if (!empty($_GET['q'])) {
+    $q = trim((string)$_GET['q']);
+    if ($q !== '') {
+        $searchQuery = $q;
+    }
+}
+
 $commenterRefId = 0;
 $commenterRef = null;
 if (!empty($_GET['commenter']) && ctype_digit((string)$_GET['commenter'])) {
@@ -120,8 +128,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $slugFilter = $filterSlug !== '' ? $filterSlug : null;
-$pendingAllComments = fetch_pending_comments($config, null, 0, $slugFilter);
-$publishedAllComments = fetch_published_comments_admin($config, null, 0, $slugFilter);
+$searchFilter = $searchQuery !== '' ? $searchQuery : null;
+$pendingAllComments = fetch_pending_comments($config, null, 0, $slugFilter, $searchFilter);
+$publishedAllComments = fetch_published_comments_admin($config, null, 0, $slugFilter, $searchFilter);
 
 if ($commenterRef !== null) {
     $pendingAllComments = filter_comments_by_commenter($pendingAllComments, $commenterRef);
@@ -140,6 +149,7 @@ if ($commenterRef !== null) {
     $perPage,
     $publishedPage
 );
+$searchQueryForView = $searchQuery;
 $csrfToken = $_SESSION['csrf_token'];
 $styleVersion = filemtime(__DIR__ . '/public/style.css');
 
@@ -150,12 +160,13 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
     <meta charset="UTF-8">
     <title><?php echo e(t('dashboard.title')); ?></title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Ctext x='50%25' y='70%25' font-size='96' text-anchor='middle'%3E%F0%9F%92%AD%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/png" href="<?php echo e(pc_url('/public/favicon.png', $config)); ?>">
     <link rel="stylesheet" href="<?php echo e(pc_url('/public/style.css', $config)); ?>?v=<?php echo e((string)$styleVersion); ?>">
 </head>
 <body class="admin">
     <main class="admin-container">
         <div class="admin-top-actions">
+            <span class="admin-logo"><span class="pure">PURE</span><span class="service">COMMENTS</span></span>
             <a class="button" href="<?php echo e(pc_url('/settings.php', $config)); ?>">
                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-settings"></use></svg>
                 <span><?php echo e(t('dashboard.settings_btn')); ?></span>
@@ -165,6 +176,42 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
                 <span><?php echo e(t('dashboard.logout_btn')); ?></span>
             </a>
         </div>
+        <div class="search-form">
+            <form method="get" class="admin-search">
+                <?php if ($filterSlug !== ''): ?>
+                    <input type="hidden" name="slug" value="<?php echo e($filterSlug); ?>">
+                <?php endif; ?>
+                <?php if ($commenterRefId > 0): ?>
+                    <input type="hidden" name="commenter" value="<?php echo e((string)$commenterRefId); ?>">
+                <?php endif; ?>
+                <label for="search-input" class="sr-only"><?php echo e(t('dashboard.search_label')); ?></label>
+                <input type="search" id="search-input" name="q" value="<?php echo e($searchQueryForView); ?>" placeholder="<?php echo e(t('dashboard.search_placeholder')); ?>">
+                <button type="submit">
+                    <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-search"></use></svg>
+                    <span><?php echo e(t('dashboard.search_btn')); ?></span>
+                </button>
+                <?php if ($searchQueryForView !== ''): ?>
+                    <?php
+                        $clearSearchUrl = pc_url('/', $config);
+                        $clearSearchParams = [];
+                        if ($filterSlug !== '') { $clearSearchParams['slug'] = $filterSlug; }
+                        if ($commenterRefId > 0) { $clearSearchParams['commenter'] = $commenterRefId; }
+                        if (!empty($clearSearchParams)) { $clearSearchUrl .= '?' . http_build_query($clearSearchParams); }
+                    ?>
+                    <a class="button button-clear danger" href="<?php echo e($clearSearchUrl); ?>">
+                        <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-delete"></use></svg>
+                        <span><?php echo e(t('dashboard.search_clear_btn')); ?></span>
+                    </a>
+                <?php endif; ?>
+            </form>
+
+            <?php if ($searchQueryForView !== ''): ?>
+                <p class="notice filter-active">
+                    <?php echo e(t('dashboard.search_active', ['query' => $searchQueryForView])); ?>
+                </p>
+            <?php endif; ?>
+        </div>
+        
         <?php foreach ($messages as $message): ?>
             <p class="notice success"><?php echo e($message); ?></p>
         <?php endforeach; ?>
@@ -192,13 +239,13 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
         <section class="admin-section" id="pending-comments">
             <h2><?php echo e(t('dashboard.pending_heading')); ?></h2>
             <?php echo render_admin_comments_table($pendingComments, $csrfToken, $config, 'pending', $pendingPage, $publishedPage, $filterSlug, $commenterRefId); ?>
-            <?php echo render_admin_pagination($pendingPage, $pendingPages, 'pending', $pendingPage, $publishedPage, $filterSlug, $commenterRefId); ?>
+            <?php echo render_admin_pagination($pendingPage, $pendingPages, 'pending', $pendingPage, $publishedPage, $filterSlug, $commenterRefId, $searchQueryForView); ?>
         </section>
 
         <section class="admin-section" id="published-comments">
             <h2><?php echo e(t('dashboard.published_heading')); ?></h2>
             <?php echo render_admin_comments_table($publishedComments, $csrfToken, $config, 'published', $pendingPage, $publishedPage, $filterSlug, $commenterRefId); ?>
-            <?php echo render_admin_pagination($publishedPage, $publishedPages, 'published', $pendingPage, $publishedPage, $filterSlug, $commenterRefId); ?>
+            <?php echo render_admin_pagination($publishedPage, $publishedPages, 'published', $pendingPage, $publishedPage, $filterSlug, $commenterRefId, $searchQueryForView); ?>
         </section>
     </main>
     <script>

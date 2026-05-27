@@ -39,8 +39,8 @@
 :root {
   --text: #222;
   --bg: #f0f0f0;
-  --accent: #0055d4;
-  --accent-light: #E3F2FD;
+  --accent: #af2e1b;
+  --accent-light: #fce8e5;
   --accent-bg: #e6e6e6;
   --input-bg: #fafafa;
   --border: #222;
@@ -54,8 +54,8 @@
     :root {
       --text: #dcdcdc;
       --bg: #212121;
-      --accent: #88C0D0;
-      --accent-light: #061a38;
+      --accent: #ff8a80;
+      --accent-light: #3d1308;
       --accent-bg: #222;
       --input-bg: #111;
       --border: #ccc;
@@ -142,12 +142,76 @@ main.admin-container {
 .admin-top-actions {
     display: flex;
     gap: 0.5rem;
-    justify-content: flex-end;
+    align-items: center;
     flex-wrap: wrap;
+    margin-bottom: 1rem;
 }
 
 .admin-top-actions .button {
-    margin: 0 0 1rem 0;
+    margin: 0;
+}
+
+.admin-logo {
+    --accent: var(--red);
+    color: var(--accent);
+    border: 3px solid currentColor;
+    font-weight: bold;
+    font-size: 2.5rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: stretch;
+    margin-right: auto;
+    text-decoration: none;
+}
+
+.admin-logo .pure,
+.admin-logo .service {
+    padding: 0.1rem 0.4rem;
+}
+
+.admin-logo .service {
+    background: var(--accent);
+    color: var(--bg);
+}
+
+.search-form {
+    margin: 3rem 0;
+}
+
+.admin-search {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.admin-search input[type="search"] {
+    flex: 1 1 16rem;
+    margin: 0;
+    padding: 10px 12px;
+    min-width: 0;
+}
+
+.admin-search button {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.admin-search .button-clear {
+    margin: 0;
+    padding: 8px 12px;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 .admin-section {
@@ -583,6 +647,12 @@ a.button:hover {
     .notice.success,
     .notice.filter-active {
         background: rgba(163, 190, 140, 0.1);
+    }
+
+    .admin-section h2 {
+    background: var(--input-bg);
+    border: 3px solid var(--red);
+    color: var(--red);
     }
 }
 

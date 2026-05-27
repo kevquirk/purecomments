@@ -38,4 +38,8 @@
     <path d="M4.636 5.235a10 10 0 0 1 .891-.857"></path>
     <path d="M8.644 21.42a10 10 0 0 0 7.631-.38"></path>
   </symbol>
+  <symbol id="icon-search" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="8"></circle>
+    <path d="m21 21-4.35-4.35"></path>
+  </symbol>
 </svg>

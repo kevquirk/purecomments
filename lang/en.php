@@ -42,6 +42,11 @@ return [
         'filter_active'             => 'Filtered by post: {title}',
         'filter_commenter_active'   => 'Filtered by commenter: {name}',
         'filter_clear_btn'          => 'Clear filter',
+        'search_label'              => 'Search comments',
+        'search_placeholder'        => 'Search by name or content…',
+        'search_btn'                => 'Search',
+        'search_active'             => 'Showing results for: {query}',
+        'search_clear_btn'          => 'Clear search',
     ],
 
     'comments' => [

@@ -62,10 +62,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?php echo htmlspecialchars(t('login.title'), ENT_QUOTES, 'UTF-8'); ?></title>
+    <link rel="icon" type="image/png" href="<?php echo htmlspecialchars(pc_url('/public/favicon.png', $config), ENT_QUOTES, 'UTF-8'); ?>">
     <link rel="stylesheet" href="<?php echo htmlspecialchars(pc_url('/public/style.css', $config) . '?v=' . (string)$styleVersion, ENT_QUOTES, 'UTF-8'); ?>">
 </head>
 <body class="admin">
     <main class="admin-container">
+        <div class="admin-top-actions">
+            <span class="admin-logo"><span class="pure">PURE</span><span class="service">COMMENTS</span></span>
+        </div>
         <h1><?php echo htmlspecialchars(t('login.heading'), ENT_QUOTES, 'UTF-8'); ?></h1>
         <?php if ($setupNotice !== '') : ?>
             <p class="notice success"><?php echo htmlspecialchars($setupNotice, ENT_QUOTES, 'UTF-8'); ?></p>
