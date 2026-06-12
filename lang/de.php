@@ -42,11 +42,11 @@ return [
         'filter_active'             => 'Gefiltert nach Beitrag: {title}',
         'filter_commenter_active'   => 'Gefiltert nach Kommentator: {name}',
         'filter_clear_btn'          => 'Filter löschen',
-        'search_label'              => 'Search comments', // ENGLISH PLACEHOLDER
-        'search_placeholder'        => 'Search by name or content…', // ENGLISH PLACEHOLDER
-        'search_btn'                => 'Search', // ENGLISH PLACEHOLDER
-        'search_active'             => 'Showing results for: {query}', // ENGLISH PLACEHOLDER
-        'search_clear_btn'          => 'Clear search', // ENGLISH PLACEHOLDER
+        'search_label'              => 'Kommentare suchen',
+        'search_placeholder'        => 'Nach Name oder Inhalt suchen …',
+        'search_btn'                => 'Suchen',
+        'search_active'             => 'Zeige Ergebnisse für: {query}',
+        'search_clear_btn'          => 'Suche löschen',
     ],
 
     'comments' => [
