@@ -3,16 +3,18 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/url.php';
 
-function remember_me_token(array $config): string
-{
-    return hash_hmac('sha256', 'purecomments_remember_me', $config['admin_password_hash'] ?? '');
-}
-
 function set_remember_me_cookie(array $config): void
 {
+    $token = bin2hex(random_bytes(32));
+    $hash = hash('sha256', $token);
+    $expires = time() + (90 * 24 * 60 * 60);
+
+    require_once __DIR__ . '/db.php';
+    insert_remember_token($config, $hash, $expires);
+
     $https = !empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off';
-    setcookie('pc_remember', remember_me_token($config), [
-        'expires'  => time() + (90 * 24 * 60 * 60),
+    setcookie('pc_remember', $token, [
+        'expires'  => $expires,
         'path'     => '/',
         'secure'   => $https,
         'httponly' => true,
@@ -22,6 +24,16 @@ function set_remember_me_cookie(array $config): void
 
 function clear_remember_me_cookie(): void
 {
+    $cookie = $_COOKIE['pc_remember'] ?? '';
+    if ($cookie !== '') {
+        $configPath = __DIR__ . '/../config.php';
+        if (is_file($configPath)) {
+            $config = require $configPath;
+            require_once __DIR__ . '/db.php';
+            $hash = hash('sha256', $cookie);
+            delete_remember_token($config, $hash);
+        }
+    }
     setcookie('pc_remember', '', ['expires' => time() - 3600, 'path' => '/']);
 }
 
@@ -34,7 +46,9 @@ function maybe_restore_admin_from_cookie(array $config): void
     if ($cookie === '') {
         return;
     }
-    if (hash_equals(remember_me_token($config), $cookie)) {
+    require_once __DIR__ . '/db.php';
+    $hash = hash('sha256', $cookie);
+    if (verify_remember_token($config, $hash)) {
         $_SESSION['admin_logged_in'] = true;
         $_SESSION['admin_username'] = $config['admin_username'] ?? '';
     }

@@ -112,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $form['smtp_user'] = '';
             $form['smtp_pwd'] = '';
             $form['smtp_enc'] = 'tls';
+            $form['smtp_debug'] = false;
         } elseif ($emailProvider === 'smtp') {
             $form['smtp_host']  = trim((string)($_POST['smtp_host'] ?? ''));
             $form['smtp_port']  = trim((string)($_POST['smtp_port'] ?? '587'));
@@ -135,6 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $form['smtp_user'] = '';
             $form['smtp_pwd'] = '';
             $form['smtp_enc'] = 'tls';
+            $form['smtp_debug'] = false;
         }
 
         if ($form['admin_username'] === '') {

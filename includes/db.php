@@ -37,6 +37,13 @@ function db(array $config): PDO
             status TEXT NOT NULL CHECK(status IN ('pending','published'))
         );"
     );
+    $pdo->exec(
+        "CREATE TABLE IF NOT EXISTS remember_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            token_hash TEXT NOT NULL UNIQUE,
+            expires_at INTEGER NOT NULL
+        );"
+    );
     ensure_schema($pdo);
 
     return $pdo;
@@ -274,4 +281,32 @@ function delete_comment_thread(array $config, int $rootId): bool
     );
     $stmt->execute([':root_id' => $rootId]);
     return true;
+}
+
+function insert_remember_token(array $config, string $tokenHash, int $expiresAt): void
+{
+    $pdo = db($config);
+    $stmt = $pdo->prepare('INSERT OR REPLACE INTO remember_tokens (token_hash, expires_at) VALUES (:token_hash, :expires_at)');
+    $stmt->execute([
+        ':token_hash' => $tokenHash,
+        ':expires_at' => $expiresAt,
+    ]);
+}
+
+function verify_remember_token(array $config, string $tokenHash): bool
+{
+    $pdo = db($config);
+    $stmt = $pdo->prepare('SELECT 1 FROM remember_tokens WHERE token_hash = :token_hash AND expires_at > :now LIMIT 1');
+    $stmt->execute([
+        ':token_hash' => $tokenHash,
+        ':now'        => time(),
+    ]);
+    return (bool)$stmt->fetchColumn();
+}
+
+function delete_remember_token(array $config, string $tokenHash): void
+{
+    $pdo = db($config);
+    $stmt = $pdo->prepare('DELETE FROM remember_tokens WHERE token_hash = :token_hash');
+    $stmt->execute([':token_hash' => $tokenHash]);
 }
