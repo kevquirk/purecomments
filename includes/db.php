@@ -213,9 +213,7 @@ function is_author_comment(array $config, ?string $encryptedEmail, string $name)
 
     if ($authorEmail !== '') {
         $plain = decrypt_email($encryptedEmail, $config);
-        if ($plain !== null && strcasecmp($plain, $authorEmail) === 0) {
-            return true;
-        }
+        return $plain !== null && strcasecmp($plain, $authorEmail) === 0;
     }
 
     if ($authorName !== '') {
