@@ -15,27 +15,29 @@
     }
 
     const fallbackStrings = {
-        title:           'Comments',
-        unavailable:     'Comments unavailable.',
-        load_btn:        'Load comments',
-        loading:         '💭 Loading comments…',
-        load_error:      'Comments could not be loaded.',
-        no_comments:     'No comments yet.',
-        author_badge:    'Admin',
-        reply_btn:       '↪ Reply',
-        replying_to:     'Replying to comment #{id}',
-        cancel_reply:    '❌ Cancel reply',
-        form_heading:    'Leave a comment',
-        privacy_link:    'Read the comment privacy notice',
-        field_name:      'Name',
-        field_email:     'Email (optional)',
-        field_website:   'Website (optional)',
-        field_comment:   'Comment (Markdown supported)',
-        submitting:      'Sending…',
-        submit_btn:      'Submit comment',
-        submit_success:  'Thanks! Your comment is awaiting moderation.',
-        submit_error:    'Oops! There was a problem submitting your comment.',
+        title: 'Comments',
+        unavailable: 'Comments unavailable.',
+        load_btn: 'Load comments',
+        loading: 'Loading comments…',
+        load_error: 'Comments could not be loaded.',
+        no_comments: 'No comments yet.',
+        author_badge: 'Admin',
+        reply_btn: '↪ Reply',
+        replying_to: 'Replying to comment #{id}',
+        cancel_reply: 'Cancel reply',
+        form_heading: 'Leave a comment',
+        privacy_link: 'Read the comment privacy notice',
+        field_name: 'Name',
+        field_email: 'Email (optional)',
+        field_website: 'Website (optional)',
+        field_comment: 'Comment (Markdown supported)',
+        submitting: 'Sending…',
+        submit_btn: 'Submit comment',
+        submit_success: 'Thanks! Your comment is awaiting moderation.',
+        submit_error: 'Oops! There was a problem submitting your comment.',
     };
+
+    let lang = 'en';
     // s is rebuilt after the API responds (with server-translated strings as the base layer).
     // fallbackStrings is used only for the pre-load UI (load button, unavailable message).
     let s = Object.assign({}, fallbackStrings, (window.PureComments && window.PureComments.strings) || {});
@@ -66,32 +68,64 @@
     loadButton.type = 'button';
     loadButton.textContent = s.load_btn;
     loadButton.className = 'button load';
+
+    let apiData = null;
+    let commentsLoaded = false;
+
+    const fetchPromise = apiFetch(
+        baseUrl + '/api/comments/' + slug,
+        baseUrl + '/api/index.php?endpoint=' + encodeURIComponent('comments/' + slug)
+    )
+        .then(handleResponse)
+        .then(function (data) {
+            apiData = data;
+            if (data.strings && typeof data.strings === 'object') {
+                s = Object.assign({}, fallbackStrings, data.strings, (window.PureComments && window.PureComments.strings) || {});
+            }
+            if (data.language && typeof data.language === 'string') {
+                lang = data.language;
+            }
+            title.textContent = s.title;
+            if (loadButton && !commentsLoaded) {
+                loadButton.textContent = s.load_btn;
+            }
+            return data;
+        })
+        .catch(function (err) {
+            console.error('Failed to pre-fetch comments:', err);
+        });
+
     loadButton.addEventListener('click', function () {
+        commentsLoaded = true;
         contentArea.innerHTML = '';
-        loadComments();
+        if (apiData) {
+            renderCommentsSection(apiData);
+        } else {
+            contentArea.innerHTML = '<p>' + s.loading + '</p>';
+            fetchPromise
+                .then(function (data) {
+                    if (data) {
+                        renderCommentsSection(data);
+                    } else {
+                        contentArea.innerHTML = '<p>' + s.load_error + '</p>';
+                    }
+                })
+                .catch(function () {
+                    contentArea.innerHTML = '<p>' + s.load_error + '</p>';
+                });
+        }
     });
 
     contentArea.appendChild(loadButton);
-
-    function loadComments() {
-        contentArea.innerHTML = '<p>' + s.loading + '</p>';
-        apiFetch(
-            baseUrl + '/api/comments/' + slug,
-            baseUrl + '/api/index.php?endpoint=' + encodeURIComponent('comments/' + slug)
-        )
-            .then(handleResponse)
-            .then(function (data) {
-                renderCommentsSection(data || {});
-            })
-            .catch(function () {
-                contentArea.innerHTML = '<p>' + s.load_error + '</p>';
-            });
-    }
 
     function renderCommentsSection(data) {
         if (data.strings && typeof data.strings === 'object') {
             s = Object.assign({}, fallbackStrings, data.strings, (window.PureComments && window.PureComments.strings) || {});
         }
+        if (data.language && typeof data.language === 'string') {
+            lang = data.language;
+        }
+        title.textContent = s.title;
 
         const comments = Array.isArray(data.comments) ? data.comments : [];
         const challengeQuestion = typeof data.challenge_question === 'string'
@@ -391,6 +425,26 @@
         const diffHours = Math.floor(diffMinutes / 60);
         const diffDays = Math.floor(diffHours / 24);
 
+        if (typeof Intl !== 'undefined' && Intl.RelativeTimeFormat) {
+            try {
+                const rtf = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' });
+                if (diffSeconds < 45) {
+                    return rtf.format(0, 'second');
+                }
+                if (diffMinutes < 60) {
+                    return rtf.format(-diffMinutes, 'minute');
+                }
+                if (diffHours < 24) {
+                    return rtf.format(-diffHours, 'hour');
+                }
+                if (diffDays < 30) {
+                    return rtf.format(-diffDays, 'day');
+                }
+            } catch (e) {
+                // fallback
+            }
+        }
+
         if (diffSeconds < 45) return 'Just now';
         if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
         if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
@@ -403,6 +457,21 @@
         const date = new Date(isoString);
         if (Number.isNaN(date.getTime())) {
             return isoString;
+        }
+        if (typeof Intl !== 'undefined' && Intl.DateTimeFormat) {
+            try {
+                const dtf = new Intl.DateTimeFormat(lang, {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+                return dtf.format(date);
+            } catch (e) {
+                // fallback
+            }
         }
         const day = String(date.getUTCDate()).padStart(2, '0');
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

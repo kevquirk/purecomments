@@ -110,6 +110,7 @@ function handle_comments_index(array $config, string $slug): void
         'challenge_question' => get_spam_challenge_question($config),
         'challenge_placeholder' => get_spam_challenge_placeholder($config),
         'strings' => get_embed_strings(),
+        'language' => (string)($config['language'] ?? 'en'),
     ]);
 }
 
