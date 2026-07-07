@@ -45,11 +45,11 @@ return [
         'filter_active'             => 'Filtrat după postare: {title}',
         'filter_commenter_active'   => 'Filtrat după comentator: {name}',
         'filter_clear_btn'          => 'Șterge filtrul',
-        'search_label'              => 'Search comments', // ENGLISH PLACEHOLDER
-        'search_placeholder'        => 'Search by name or content…', // ENGLISH PLACEHOLDER
-        'search_btn'                => 'Search', // ENGLISH PLACEHOLDER
-        'search_active'             => 'Showing results for: {query}', // ENGLISH PLACEHOLDER
-        'search_clear_btn'          => 'Clear search', // ENGLISH PLACEHOLDER
+        'search_label'              => 'Caută comentarii',
+        'search_placeholder'        => 'Caută după nume sau conținut…',
+        'search_btn'                => 'Caută',
+        'search_active'             => 'Se afișează rezultate pentru: {query}',
+        'search_clear_btn'          => 'Șterge căutarea',
     ],
 
     'comments' => [
@@ -117,6 +117,8 @@ return [
         'field_smtp_enc'           => 'Criptare',
         'field_smtp_user'          => 'Utilizator SMTP',
         'field_smtp_pwd'           => 'Parolă SMTP',
+        'field_smtp_debug'         => 'Activează jurnalizarea de depanare SMTP',
+        'smtp_debug_heading'       => 'Jurnal de depanare SMTP',
         'field_language'           => 'Limbă admin',
         'email_none'               => 'Niciunul',
         'email_ses'                => 'Amazon SES',
@@ -168,7 +170,6 @@ return [
         'field_service_url'        => 'URL serviciu comentarii',
         'field_timezone'           => 'Fus orar',
         'field_date_format'        => 'Format dată',
-        'field_privacy_url'        => 'URL politică de confidențialitate',
         'field_challenge_question' => 'Întrebare de securitate',
         'field_challenge_answer'   => 'Răspuns la întrebarea de securitate',
         'field_challenge_ph'       => 'Text indicativ pentru întrebarea de securitate (opțional)',
