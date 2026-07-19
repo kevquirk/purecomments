@@ -341,13 +341,13 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
 
             <label for="timezone">
                 <?php echo h(t('settings.field_timezone')); ?>
-                <small>(<a href="https://www.php.net/manual/en/timezones.php" target="_blank" rel="noopener noreferrer">PHP timezone list</a>)</small>
+                <small>(<a href="<?php echo h(t('settings.link_timezone_list_url')); ?>" target="_blank" rel="noopener noreferrer"><?php echo h(t('settings.link_timezone_list')); ?></a>)</small>
             </label>
             <input id="timezone" name="timezone" required placeholder="UTC" value="<?php echo h($form['timezone']); ?>">
 
             <label for="date_format">
                 <?php echo h(t('settings.field_date_format')); ?>
-                <small>(<a href="https://www.php.net/manual/en/datetime.format.php" target="_blank" rel="noopener noreferrer">PHP date format docs</a>)</small>
+                <small>(<a href="<?php echo h(t('settings.link_date_format_docs_url')); ?>" target="_blank" rel="noopener noreferrer"><?php echo h(t('settings.link_date_format_docs')); ?></a>)</small>
             </label>
             <input id="date_format" name="date_format" required placeholder="Y-m-d H:i" value="<?php echo h($form['date_format']); ?>">
 
