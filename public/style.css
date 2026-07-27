@@ -669,3 +669,7 @@ a.button:hover {
     font-size: 0.8rem;
     white-space: nowrap;
 }
+
+.no-top-margin {
+    margin-top: 0;
+}

@@ -26,7 +26,7 @@ const PURECOMMENTS_BASE_PATH = __DIR__;
 
 function fetch_latest_purecomments_release(): array
 {
-    $endpoint = 'https://api.github.com/repos/kevquirk/purecomments/releases/latest';
+    $endpoint = 'https://packages.purecommons.org/comments/latest.json';
     $headers = [
         'User-Agent: PureComments-Updates-Check',
         'Accept: application/json',
@@ -743,7 +743,7 @@ function apply_release_update(string $zipballUrl, string $releaseTag = ''): arra
 }
 
 $latest = null;
-if (isset($_GET['check'])) {
+if (isset($_GET['check']) || isset($_GET['package_plan'])) {
     $latest = fetch_latest_purecomments_release();
 }
 
@@ -751,11 +751,10 @@ $currentVersionDisplay = detect_current_purecomments_version();
 $packagePlan = null;
 $packagePlanError = '';
 if (isset($_GET['package_plan'])) {
-    $latestForPackage = fetch_latest_purecomments_release();
-    if (!($latestForPackage['ok'] ?? false)) {
-        $packagePlanError = (string) ($latestForPackage['error'] ?? 'Unable to fetch latest release metadata.');
+    if ($latest === null || !($latest['ok'] ?? false)) {
+        $packagePlanError = (string) (($latest['error'] ?? '') !== '' ? $latest['error'] : 'Unable to fetch latest release metadata.');
     } else {
-        $latestTag = (string) ($latestForPackage['tag'] ?? '');
+        $latestTag = (string) ($latest['tag'] ?? '');
         $currentVersion = detect_current_purecomments_version();
 
         if ($latestTag !== '' && versions_match($currentVersion, $latestTag)) {
@@ -765,7 +764,7 @@ if (isset($_GET['package_plan'])) {
                 'message' => t('updates.msg_already_latest', ['version' => $latestTag]),
             ];
         } else {
-            $packagePlan = build_package_upgrade_plan((string) ($latestForPackage['zipball_url'] ?? ''));
+            $packagePlan = build_package_upgrade_plan((string) ($latest['zipball_url'] ?? ''));
             if (!($packagePlan['ok'] ?? false)) {
                 $packagePlanError = (string) ($packagePlan['error'] ?? 'Unable to build package plan.');
             }
@@ -871,6 +870,15 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
             <?php endif; ?>
 
             <?php if ($latest !== null && ($latest['ok'] ?? false)) : ?>
+                <?php
+                $latestTag = (string) ($latest['tag'] ?? '');
+                $currentVersion = detect_current_purecomments_version();
+                $updateAvailable = ($latestTag !== '' && $currentVersion !== 'unknown' && !versions_match($currentVersion, $latestTag));
+                $displayLatestVersion = ltrim($latestTag, 'v');
+                ?>
+                <?php if ($updateAvailable) : ?>
+                    <h3 class="no-top-margin">🎉 New Version Available (v<?php echo h($displayLatestVersion); ?>)</h3>
+                <?php endif; ?>
                 <p><strong><?php echo h(t('updates.latest_release')); ?></strong> <?php echo h($latest['tag'] !== '' ? (string) $latest['tag'] : (string) ($latest['name'] ?? 'Unknown')); ?></p>
                 <?php if (($latest['published_at'] ?? '') !== '') : ?>
                     <p><strong><?php echo h(t('updates.published_label')); ?></strong> <?php echo h((string) date('Y-m-d', strtotime((string) $latest['published_at']))); ?></p>
