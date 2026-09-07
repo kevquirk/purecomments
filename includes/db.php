@@ -92,25 +92,39 @@ function ensure_schema(PDO $pdo): void
     if (!in_array('website', $names, true)) {
         $pdo->exec('ALTER TABLE comments ADD COLUMN website TEXT');
     }
+    if (!in_array('type', $names, true)) {
+        $pdo->exec("ALTER TABLE comments ADD COLUMN type TEXT NOT NULL DEFAULT 'comment'");
+    }
+    if (!in_array('source_url', $names, true)) {
+        $pdo->exec('ALTER TABLE comments ADD COLUMN source_url TEXT DEFAULT NULL');
+    }
+    if (!in_array('avatar_url', $names, true)) {
+        $pdo->exec('ALTER TABLE comments ADD COLUMN avatar_url TEXT DEFAULT NULL');
+    }
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_comments_slug_status_type ON comments(post_slug, status, type);');
+    $pdo->exec('CREATE INDEX IF NOT EXISTS idx_comments_source_url ON comments(source_url);');
 }
 
 function insert_comment(array $config, array $data): int
 {
     $pdo = db($config);
     $stmt = $pdo->prepare(
-        'INSERT INTO comments (post_slug, parent_id, name, email, website, content_md, content_html, created_at, status)
-         VALUES (:post_slug, :parent_id, :name, :email, :website, :content_md, :content_html, :created_at, :status)'
+        'INSERT INTO comments (post_slug, parent_id, name, email, website, content_md, content_html, created_at, status, type, source_url, avatar_url)
+         VALUES (:post_slug, :parent_id, :name, :email, :website, :content_md, :content_html, :created_at, :status, :type, :source_url, :avatar_url)'
     );
     $stmt->execute([
         ':post_slug' => $data['post_slug'],
         ':parent_id' => $data['parent_id'],
         ':name' => $data['name'],
-        ':email' => $data['email_encrypted'],
-        ':website' => $data['website'],
+        ':email' => $data['email_encrypted'] ?? null,
+        ':website' => $data['website'] ?? null,
         ':content_md' => $data['content_md'],
         ':content_html' => $data['content_html'],
         ':created_at' => $data['created_at'],
         ':status' => $data['status'],
+        ':type' => $data['type'] ?? 'comment',
+        ':source_url' => $data['source_url'] ?? null,
+        ':avatar_url' => $data['avatar_url'] ?? null,
     ]);
 
     return (int)$pdo->lastInsertId();
@@ -120,16 +134,96 @@ function fetch_published_comments(array $config, string $slug): array
 {
     $pdo = db($config);
     $stmt = $pdo->prepare(
-        'SELECT id, post_slug, parent_id, name, website, content_html, created_at, email
+        "SELECT id, post_slug, parent_id, name, website, content_html, created_at, email, type, source_url, avatar_url
          FROM comments
-         WHERE post_slug = :slug AND status = :status
-         ORDER BY created_at ASC'
+         WHERE post_slug = :slug AND status = :status AND type NOT IN ('like', 'repost')
+         ORDER BY created_at ASC"
     );
     $stmt->execute([
         ':slug' => $slug,
         ':status' => 'published',
     ]);
     return $stmt->fetchAll() ?: [];
+}
+
+function fetch_post_reactions(array $config, string $slug): array
+{
+    $pdo = db($config);
+    $stmt = $pdo->prepare(
+        "SELECT id, name, website, avatar_url, source_url, created_at, type
+         FROM comments
+         WHERE post_slug = :slug AND status = 'published' AND type IN ('like', 'repost')
+         ORDER BY created_at ASC"
+    );
+    $stmt->execute([':slug' => $slug]);
+    $rows = $stmt->fetchAll() ?: [];
+
+    $likes = [];
+    $reposts = [];
+    foreach ($rows as $row) {
+        $reaction = [
+            'id' => (int)$row['id'],
+            'name' => $row['name'],
+            'website' => !empty($row['website']) ? $row['website'] : ($row['source_url'] ?? null),
+            'avatar_url' => $row['avatar_url'] ?? null,
+            'source_url' => $row['source_url'] ?? null,
+            'created_at' => $row['created_at'],
+        ];
+        if ($row['type'] === 'like') {
+            $likes[] = $reaction;
+        } elseif ($row['type'] === 'repost') {
+            $reposts[] = $reaction;
+        }
+    }
+
+    return [
+        'likes' => $likes,
+        'reposts' => $reposts,
+    ];
+}
+
+function fetch_comment_by_source(array $config, string $sourceUrl, string $slug): ?array
+{
+    $pdo = db($config);
+    $stmt = $pdo->prepare('SELECT * FROM comments WHERE source_url = :source_url AND post_slug = :slug LIMIT 1');
+    $stmt->execute([
+        ':source_url' => $sourceUrl,
+        ':slug' => $slug,
+    ]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+function insert_or_update_webmention(array $config, array $data): int
+{
+    $pdo = db($config);
+    $existing = fetch_comment_by_source($config, $data['source_url'], $data['post_slug']);
+    if ($existing) {
+        $stmt = $pdo->prepare(
+            'UPDATE comments SET
+                name = :name,
+                website = :website,
+                avatar_url = :avatar_url,
+                type = :type,
+                content_md = :content_md,
+                content_html = :content_html,
+                status = :status
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            ':id' => $existing['id'],
+            ':name' => $data['name'],
+            ':website' => $data['website'] ?? null,
+            ':avatar_url' => $data['avatar_url'] ?? null,
+            ':type' => $data['type'] ?? 'comment',
+            ':content_md' => $data['content_md'] ?? '',
+            ':content_html' => $data['content_html'] ?? '',
+            ':status' => $data['status'] ?? 'published',
+        ]);
+        return (int)$existing['id'];
+    }
+
+    return insert_comment($config, $data);
 }
 
 function fetch_comments_by_status(
@@ -155,7 +249,7 @@ function fetch_comments_by_status(
     }
 
     $sql =
-        "SELECT id, post_slug, parent_id, name, email, website, content_md, content_html, created_at, status
+        "SELECT id, post_slug, parent_id, name, email, website, content_md, content_html, created_at, status, type, source_url, avatar_url
          FROM comments
          {$where}
          ORDER BY created_at {$direction}";

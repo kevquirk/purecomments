@@ -18,6 +18,7 @@ require __DIR__ . '/../includes/db.php';
 require __DIR__ . '/../includes/parsedown.php';
 require __DIR__ . '/../includes/render.php';
 require __DIR__ . '/../includes/ses.php';
+require __DIR__ . '/../includes/webmention.php';
 require_once __DIR__ . '/../includes/i18n.php';
 pc_set_language((string)($config['language'] ?? 'en'));
 
@@ -62,6 +63,10 @@ switch ($_SERVER['REQUEST_METHOD']) {
             handle_submit_comment($config);
             break;
         }
+        if ($path === '/webmention') {
+            handle_webmention_endpoint($config);
+            break;
+        }
         respond_json(['error' => 'Not Found'], 404);
         break;
     default:
@@ -99,19 +104,101 @@ function handle_comments_index(array $config, string $slug): void
             'content_html' => $comment['content_html'],
             'created_at' => $comment['created_at'],
             'website' => $comment['website'] ?? null,
+            'type' => $comment['type'] ?? 'comment',
+            'source_url' => $comment['source_url'] ?? null,
+            'avatar_url' => $comment['avatar_url'] ?? null,
             'is_author' => is_author_comment($config, $comment['email'] ?? null, $comment['name']),
         ];
     }, $comments);
 
+    $reactions = fetch_post_reactions($config, $slug);
     $tree = build_comment_tree($formatted);
+
     respond_json([
         'comments' => $tree,
+        'reactions' => $reactions,
         'privacy_policy_url' => get_privacy_policy_url($config),
         'challenge_question' => get_spam_challenge_question($config),
         'challenge_placeholder' => get_spam_challenge_placeholder($config),
         'strings' => get_embed_strings(),
         'language' => (string)($config['language'] ?? 'en'),
     ]);
+}
+
+function handle_webmention_endpoint(array $config): void
+{
+    $source = trim((string)($_POST['source'] ?? ''));
+    $target = trim((string)($_POST['target'] ?? ''));
+
+    if ($source === '' || $target === '') {
+        $rawInput = file_get_contents('php://input');
+        if ($rawInput !== false && $rawInput !== '') {
+            parse_str($rawInput, $parsedPost);
+            $source = trim((string)($parsedPost['source'] ?? ''));
+            $target = trim((string)($parsedPost['target'] ?? ''));
+        }
+    }
+
+    if ($source === '' || $target === '') {
+        respond_json(['error' => 'Both "source" and "target" parameters are required'], 400);
+    }
+
+    $slug = resolve_target_slug($target, $config);
+    if ($slug === null || !validate_post_slug($slug)) {
+        respond_json(['error' => 'Target URL does not correspond to a valid post on this site'], 400);
+    }
+
+    $fetchResult = fetch_webmention_source($source, $target);
+    if (!($fetchResult['ok'] ?? false)) {
+        respond_json(['error' => $fetchResult['error'] ?? 'Failed to verify webmention source'], 400);
+    }
+
+    $autoApproveReactions = (bool)($config['webmentions']['auto_approve_reactions'] ?? true);
+    $autoApproveReplies = (bool)($config['webmentions']['auto_approve_replies'] ?? false);
+
+    $isReaction = in_array($fetchResult['type'], ['like', 'repost'], true);
+    $status = ($isReaction && $autoApproveReactions) || (!$isReaction && $autoApproveReplies) ? 'published' : 'pending';
+
+    $commentId = insert_or_update_webmention($config, [
+        'post_slug' => $slug,
+        'parent_id' => null,
+        'name' => $fetchResult['name'],
+        'website' => $fetchResult['website'],
+        'avatar_url' => $fetchResult['avatar_url'],
+        'content_md' => $fetchResult['content_md'],
+        'content_html' => $fetchResult['content_html'],
+        'created_at' => $fetchResult['created_at'],
+        'status' => $status,
+        'type' => $fetchResult['type'],
+        'source_url' => $fetchResult['source_url'],
+    ]);
+
+    if ($status === 'pending' && !empty($config['moderation']['notify_email'])) {
+        $postTitle = resolve_post_title($slug, $config);
+        $moderationLink = rtrim((string)($config['moderation']['base_url'] ?? ''), '/') . '/';
+        $subject = t('notifications.moderation_subject');
+        $bodyText = t('notifications.moderation_body', [
+            'post'    => $postTitle,
+            'name'    => $fetchResult['name'],
+            'content' => $fetchResult['content_md'],
+            'url'     => $moderationLink,
+        ]);
+        if (!empty($config['smtp']['host'])) {
+            require_once __DIR__ . '/../includes/smtpmail.php';
+            smtp_send_email($config, (string)$config['moderation']['notify_email'], $subject, $bodyText);
+        } elseif (!empty($config['aws']['access_key'])) {
+            require_once __DIR__ . '/../includes/ses.php';
+            ses_send_email($config, (string)$config['moderation']['notify_email'], $subject, $bodyText);
+        }
+    }
+
+    respond_json([
+        'ok' => true,
+        'message' => 'Webmention accepted and processed',
+        'id' => $commentId,
+        'type' => $fetchResult['type'],
+        'status' => $status,
+    ], 202);
 }
 
 function handle_submit_comment(array $config): void
@@ -191,15 +278,23 @@ function handle_submit_comment(array $config): void
 
     $commentId = insert_comment($config, $data);
 
-    $moderationLink = rtrim($config['moderation']['base_url'], '/') . '/';
-    $subject = t('notifications.moderation_subject');
-    $bodyText = t('notifications.moderation_body', [
-        'post'    => $postTitle,
-        'name'    => $name,
-        'content' => $content,
-        'url'     => $moderationLink,
-    ]);
-    ses_send_email($config, $config['moderation']['notify_email'], $subject, $bodyText);
+    if (!empty($config['moderation']['notify_email'])) {
+        $moderationLink = rtrim((string)($config['moderation']['base_url'] ?? ''), '/') . '/';
+        $subject = t('notifications.moderation_subject');
+        $bodyText = t('notifications.moderation_body', [
+            'post'    => $postTitle,
+            'name'    => $name,
+            'content' => $content,
+            'url'     => $moderationLink,
+        ]);
+        if (!empty($config['smtp']['host'])) {
+            require_once __DIR__ . '/../includes/smtpmail.php';
+            smtp_send_email($config, (string)$config['moderation']['notify_email'], $subject, $bodyText);
+        } elseif (!empty($config['aws']['access_key'])) {
+            require_once __DIR__ . '/../includes/ses.php';
+            ses_send_email($config, (string)$config['moderation']['notify_email'], $subject, $bodyText);
+        }
+    }
 
     respond_json([
         'success' => true,
@@ -231,6 +326,9 @@ function get_embed_strings(): array
         'author_badge', 'reply_btn', 'replying_to', 'cancel_reply', 'form_heading',
         'privacy_link', 'field_name', 'field_email', 'field_website', 'field_comment',
         'submitting', 'submit_btn', 'submit_success', 'submit_error',
+        'likes_count', 'likes_count_singular', 'likes_count_plural',
+        'boosts_count', 'boosts_count_singular', 'boosts_count_plural',
+        'fediverse_badge', 'webmention_badge', 'view_source',
     ];
     $strings = [];
     foreach ($keys as $key) {

@@ -84,6 +84,9 @@ function render_admin_comments_table(
                 <details class="admin-comment-item<?php echo $index % 2 === 1 ? ' accent-bg' : ''; ?>" id="comment-<?php echo e((string)$comment['id']); ?>" name="comment">
                     <summary>
                         <span class="comment-summary-author">
+                            <?php if (!empty($comment['avatar_url'])) : ?>
+                                <img src="<?php echo e($comment['avatar_url']); ?>" alt="" class="admin-comment-avatar" width="20" height="20">
+                            <?php endif; ?>
                             <strong>
                                 <?php if (!empty($comment['website'])) : ?>
                                     <a href="<?php echo e($comment['website']); ?>" target="_blank" rel="noopener">
@@ -93,6 +96,11 @@ function render_admin_comments_table(
                                     <?php echo e($comment['name']); ?>
                                 <?php endif; ?>
                             </strong>
+                            <?php if (!empty($comment['type']) && $comment['type'] !== 'comment') : ?>
+                                <span class="comment-type-badge type-<?php echo e($comment['type']); ?>">
+                                    <?php echo e(t('comments.type_' . $comment['type'])); ?>
+                                </span>
+                            <?php endif; ?>
                             <?php if (!empty($comment['email_plain'])) : ?>
                                 <span class="comment-author-email"><?php echo e($comment['email_plain']); ?></span>
                             <?php endif; ?>
@@ -100,7 +108,7 @@ function render_admin_comments_table(
                                 <a href="?commenter=<?php echo e((string)$comment['id']); ?>" class="commenter-filter-link"><?php echo e(t('comments.filter_commenter_link')); ?></a>
                             <?php endif; ?>
                         </span>
-                        <span class="comment-summary-preview"><?php echo e(admin_comment_preview_text($comment['content_html'])); ?></span>
+                        <span class="comment-summary-preview"><?php echo e(admin_comment_preview_text($comment['content_html'], $comment['type'] ?? 'comment')); ?></span>
                         <span class="comment-summary-response">
                             <?php if ($parent) : ?>
                                 <span><?php echo e(t('comments.reply_to', ['name' => $parent['name']])); ?></span>
@@ -126,7 +134,18 @@ function render_admin_comments_table(
                         <?php endif; ?>
 
                         <div class="admin-comment-body">
-                            <?php echo $comment['content_html']; ?>
+                            <?php if (!empty($comment['source_url'])) : ?>
+                                <p class="admin-comment-source">
+                                    <a href="<?php echo e($comment['source_url']); ?>" target="_blank" rel="noopener noreferrer">
+                                        🔗 <?php echo e(t('comments.view_source')); ?>
+                                    </a>
+                                </p>
+                            <?php endif; ?>
+                            <?php if (!empty($comment['content_html'])) : ?>
+                                <?php echo $comment['content_html']; ?>
+                            <?php elseif (in_array($comment['type'] ?? 'comment', ['like', 'repost'], true)) : ?>
+                                <p><em><?php echo e(t('comments.reaction_no_content', ['type' => strtolower(t('comments.type_' . $comment['type']))])); ?></em></p>
+                            <?php endif; ?>
                         </div>
 
                         <?php echo render_admin_author_replies(
@@ -164,21 +183,39 @@ function render_admin_comments_table(
                             </button>
                         </form>
 
-                        <form method="post" class="admin-reply">
-                            <input type="hidden" name="csrf_token" value="<?php echo e($csrfToken); ?>">
-                            <input type="hidden" name="comment_id" value="<?php echo e((string)$comment['id']); ?>">
-                            <input type="hidden" name="context" value="<?php echo e($context); ?>">
-                            <input type="hidden" name="pending_page" value="<?php echo e((string)$pendingPage); ?>">
-                            <input type="hidden" name="published_page" value="<?php echo e((string)$publishedPage); ?>">
-                            <label>
-                                <span><?php echo e(t('comments.reply_label')); ?></span>
-                                <textarea name="reply_content" rows="3" placeholder="<?php echo e(t('comments.reply_placeholder')); ?>" class="auto-grow"></textarea>
-                            </label>
-                            <button type="submit" name="action" value="reply">
-                                <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-reply"></use></svg>
-                                <span><?php echo e(t('comments.send_reply_btn')); ?></span>
-                            </button>
-                        </form>
+                        <?php $canReply = !in_array($comment['type'] ?? 'comment', ['like', 'repost'], true); ?>
+                        <?php if ($canReply) : ?>
+                            <form method="post" class="admin-reply">
+                                <input type="hidden" name="csrf_token" value="<?php echo e($csrfToken); ?>">
+                                <input type="hidden" name="comment_id" value="<?php echo e((string)$comment['id']); ?>">
+                                <input type="hidden" name="context" value="<?php echo e($context); ?>">
+                                <input type="hidden" name="pending_page" value="<?php echo e((string)$pendingPage); ?>">
+                                <input type="hidden" name="published_page" value="<?php echo e((string)$publishedPage); ?>">
+                                <?php
+                                    $replyPrefill = '';
+                                    if (!empty($comment['type']) && in_array($comment['type'], ['reply', 'mention'], true) && !empty($comment['name'])) {
+                                        $rawName = trim((string)$comment['name']);
+                                        if ($rawName !== '') {
+                                            $handle = str_starts_with($rawName, '@') ? $rawName : '@' . $rawName;
+                                            $profileUrl = !empty($comment['website']) ? trim((string)$comment['website']) : '';
+                                            if ($profileUrl !== '') {
+                                                $replyPrefill = '[' . $handle . '](' . $profileUrl . ') ';
+                                            } else {
+                                                $replyPrefill = $handle . ' ';
+                                            }
+                                        }
+                                    }
+                                ?>
+                                <label>
+                                    <span><?php echo e(t('comments.reply_label')); ?></span>
+                                    <textarea name="reply_content" rows="3" placeholder="<?php echo e(t('comments.reply_placeholder')); ?>" class="auto-grow"><?php echo e($replyPrefill); ?></textarea>
+                                </label>
+                                <button type="submit" name="action" value="reply">
+                                    <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-reply"></use></svg>
+                                    <span><?php echo e(t('comments.send_reply_btn')); ?></span>
+                                </button>
+                            </form>
+                        <?php endif; ?>
                     </div>
                 </details>
             <?php endforeach; ?>
@@ -389,11 +426,15 @@ function render_admin_pagination(
     return (string)ob_get_clean();
 }
 
-function admin_comment_preview_text(string $html, int $maxLength = 170): string
+function admin_comment_preview_text(string $html, string $type = 'comment', int $maxLength = 170): string
 {
     $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
     $text = trim((string)preg_replace('/\s+/', ' ', $text));
     if ($text === '') {
+        if (in_array($type, ['like', 'repost'], true)) {
+            $typeName = strtolower(t('comments.type_' . $type));
+            return t('comments.reaction_no_content', ['type' => $typeName]);
+        }
         return t('comments.no_content');
     }
 

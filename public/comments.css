@@ -43,6 +43,11 @@
   margin: 1rem 0;
 }
 
+#comments img {
+  margin: 0;
+  display: inline-block;
+}
+
 #comments blockquote {
   font-size: inherit;
 }
@@ -233,6 +238,126 @@
 #comments .comment-privacy-link {
   font-size: 0.8rem;
   margin: -0.5rem 0 1rem;
+}
+
+#comments .pc-icon {
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: -0.18em;
+  display: inline-block;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+#comments .comments-reactions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--comments-bg);
+  border: var(--comments-standard-border);
+}
+
+#comments .reactions-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+#comments .reactions-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  min-width: 6rem;
+}
+
+#comments .reactions-header .pc-icon {
+  color: var(--comments-accent);
+}
+
+#comments .facepile {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  line-height: 1;
+}
+
+#comments .facepile-item {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+
+#comments .facepile-item:hover {
+  transform: scale(1.15);
+  z-index: 2;
+}
+
+#comments .facepile-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--comments-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  vertical-align: middle;
+}
+
+#comments .facepile-initials {
+  background: var(--comments-accent-bg);
+  color: var(--comments-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+#comments .comment-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--comments-border);
+  flex-shrink: 0;
+  margin: 0;
+}
+
+#comments .comment-source-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: inherit;
+  opacity: 0.8;
+  text-decoration: none;
+  padding: 0.15rem 0.45rem;
+  background: var(--comments-accent-bg);
+  border: var(--comments-standard-border);
+  border-radius: 3px;
+}
+
+#comments .comment-source-link:hover {
+  opacity: 1;
+  border-color: var(--comments-accent);
+}
+
+#comments .comment-actions button,
+#comments .cancel-reply {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 @media (max-width: 640px) {

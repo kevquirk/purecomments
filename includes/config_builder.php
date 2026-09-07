@@ -63,6 +63,8 @@ function build_config_php(array $d): string
     $lines[] = "    'author' => [";
     $lines[] = "        'name' => " . var_export($d['author_name'], true) . ',';
     $lines[] = "        'email' => " . var_export($d['author_email'], true) . ',';
+    $lines[] = "        'avatar_url' => " . var_export((string)($d['author_avatar_url'] ?? ''), true) . ',';
+    $lines[] = "        'bio' => " . var_export((string)($d['author_bio'] ?? ''), true) . ',';
     $lines[] = '    ],';
     $lines[] = "    'aws' => [";
     $lines[] = "        'region' => " . var_export($d['aws_region'], true) . ',';
@@ -82,6 +84,12 @@ function build_config_php(array $d): string
     $lines[] = "    'moderation' => [";
     $lines[] = "        'notify_email' => " . var_export($d['notify_email'], true) . ',';
     $lines[] = "        'base_url' => " . var_export($d['moderation_base_url'], true) . ',';
+    $lines[] = '    ],';
+    $lines[] = "    'webmentions' => [";
+    $lines[] = "        'enabled' => " . var_export((bool)($d['webmentions_enabled'] ?? true), true) . ',';
+    $lines[] = "        'fediverse_profile_url' => " . var_export((string)($d['fediverse_profile_url'] ?? ''), true) . ',';
+    $lines[] = "        'auto_approve_reactions' => " . var_export((bool)($d['auto_approve_reactions'] ?? true), true) . ',';
+    $lines[] = "        'auto_approve_replies' => " . var_export((bool)($d['auto_approve_replies'] ?? false), true) . ',';
     $lines[] = '    ],';
     $lines[] = '];';
     $lines[] = '';

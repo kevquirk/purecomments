@@ -39,6 +39,8 @@ $form = [
     'post_base_url' => (string)($config['post_base_url'] ?? ''),
     'author_name' => (string)($config['author']['name'] ?? ''),
     'author_email' => (string)($config['author']['email'] ?? ''),
+    'author_avatar_url' => (string)($config['author']['avatar_url'] ?? ''),
+    'author_bio' => (string)($config['author']['bio'] ?? ''),
     'notify_email' => (string)($config['moderation']['notify_email'] ?? ''),
     'moderation_base_url' => (string)($config['moderation']['base_url'] ?? ''),
     'aws_region' => (string)($config['aws']['region'] ?? ''),
@@ -51,7 +53,10 @@ $form = [
     'smtp_user' => (string)($config['smtp']['user'] ?? ''),
     'smtp_pwd' => (string)($config['smtp']['pwd'] ?? ''),
     'smtp_enc' => (string)($config['smtp']['enc'] ?? 'tls'),
-    'smtp_debug' => (bool)($config['smtp']['debug'] ?? false),
+    'webmentions_enabled' => (bool)($config['webmentions']['enabled'] ?? true),
+    'fediverse_profile_url' => (string)($config['webmentions']['fediverse_profile_url'] ?? ''),
+    'auto_approve_reactions' => (bool)($config['webmentions']['auto_approve_reactions'] ?? true),
+    'auto_approve_replies' => (bool)($config['webmentions']['auto_approve_replies'] ?? false),
 ];
 
 $emailProvider = '';
@@ -98,6 +103,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $form['post_base_url'] = trim((string)($_POST['post_base_url'] ?? ''));
         $form['author_name'] = trim((string)($_POST['author_name'] ?? ''));
         $form['author_email'] = trim((string)($_POST['author_email'] ?? ''));
+        $form['author_avatar_url'] = trim((string)($_POST['author_avatar_url'] ?? ''));
+        $form['author_bio'] = trim((string)($_POST['author_bio'] ?? ''));
         $form['notify_email'] = trim((string)($_POST['notify_email'] ?? ''));
         $form['moderation_base_url'] = trim((string)($_POST['moderation_base_url'] ?? ''));
         $emailProvider = trim((string)($_POST['email_provider'] ?? ''));
@@ -135,9 +142,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $form['smtp_port'] = '587';
             $form['smtp_user'] = '';
             $form['smtp_pwd'] = '';
-            $form['smtp_enc'] = 'tls';
+            $form['smtp_enc']   = 'tls';
             $form['smtp_debug'] = false;
         }
+
+        $form['webmentions_enabled'] = isset($_POST['webmentions_enabled']);
+        $form['fediverse_profile_url'] = trim((string)($_POST['fediverse_profile_url'] ?? ''));
+        $form['auto_approve_reactions'] = isset($_POST['auto_approve_reactions']);
+        $form['auto_approve_replies'] = isset($_POST['auto_approve_replies']);
 
         if ($form['admin_username'] === '') {
             $errors[] = t('settings.err_username');
@@ -230,6 +242,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'post_base_url' => rtrim($form['post_base_url'], '/'),
                 'author_name' => $form['author_name'],
                 'author_email' => $form['author_email'],
+                'author_avatar_url' => $form['author_avatar_url'],
+                'author_bio' => $form['author_bio'],
                 'aws_region' => $form['aws_region'],
                 'aws_access_key' => $form['aws_access_key'],
                 'aws_secret_key' => $form['aws_secret_key'],
@@ -243,6 +257,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'smtp_debug' => $form['smtp_debug'],
                 'notify_email' => $form['notify_email'],
                 'moderation_base_url' => rtrim($form['moderation_base_url'], '/') . '/',
+                'webmentions_enabled' => $form['webmentions_enabled'],
+                'fediverse_profile_url' => $form['fediverse_profile_url'],
+                'auto_approve_reactions' => $form['auto_approve_reactions'],
+                'auto_approve_replies' => $form['auto_approve_replies'],
             ]);
 
             if (@file_put_contents($configPath, $configPhp, LOCK_EX) === false) {
@@ -371,6 +389,12 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
             <label for="author_email"><?php echo h(t('settings.field_author_email')); ?></label>
             <input id="author_email" name="author_email" type="email" required value="<?php echo h($form['author_email']); ?>">
 
+            <label for="author_avatar_url"><?php echo h(t('settings.field_author_avatar_url')); ?></label>
+            <input id="author_avatar_url" name="author_avatar_url" placeholder="https://example.com/avatar.jpg" value="<?php echo h($form['author_avatar_url']); ?>">
+
+            <label for="author_bio"><?php echo h(t('settings.field_author_bio')); ?></label>
+            <input id="author_bio" name="author_bio" placeholder="Blogger & developer." value="<?php echo h($form['author_bio']); ?>">
+
             <h2><?php echo h(t('settings.section_email')); ?></h2>
             <label for="email_provider"><?php echo h(t('settings.field_email_provider')); ?></label>
             <select id="email_provider" name="email_provider">
@@ -425,6 +449,44 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
                 </label>
             </div>
 
+            <h2><?php echo h(t('settings.section_webmentions')); ?></h2>
+            <label class="inline-checkbox checkbox-label" for="webmentions_enabled">
+                <input id="webmentions_enabled" name="webmentions_enabled" type="checkbox" value="1" <?php echo $form['webmentions_enabled'] ? 'checked' : ''; ?>>
+                <span><?php echo h(t('settings.field_webmentions_enabled')); ?></span>
+            </label>
+
+            <?php
+                $webmentionUrl = rtrim($form['moderation_base_url'], '/') . '/api/webmention';
+                $fediverseProfileUrl = trim($form['fediverse_profile_url']);
+
+                $snippet = "<!-- Webmention & Fediverse Discovery -->\n"
+                    . "<link rel=\"webmention\" href=\"{$webmentionUrl}\">";
+                if ($fediverseProfileUrl !== '') {
+                    $snippet .= "\n<link rel=\"me\" href=\"{$fediverseProfileUrl}\">";
+                }
+            ?>
+
+            <div id="webmentions-settings" class="admin-form-section">
+                <label><?php echo h(t('settings.field_webmention_endpoint_tag')); ?></label>
+                <pre class="webmention-code-block"><code><?php echo h($snippet); ?></code></pre>
+
+                <label for="fediverse_profile_url">
+                    <?php echo h(t('settings.field_fediverse_profile_url')); ?>
+                    <small><?php echo t('settings.bridgy_connect_help'); ?></small>
+                </label>
+                <input id="fediverse_profile_url" name="fediverse_profile_url" placeholder="https://mastodon.social/@username" value="<?php echo h($form['fediverse_profile_url']); ?>">
+
+                <label class="inline-checkbox checkbox-label" for="auto_approve_reactions">
+                    <input id="auto_approve_reactions" name="auto_approve_reactions" type="checkbox" value="1" <?php echo $form['auto_approve_reactions'] ? 'checked' : ''; ?>>
+                    <span><?php echo h(t('settings.field_auto_approve_reactions')); ?></span>
+                </label>
+
+                <label class="inline-checkbox checkbox-label" for="auto_approve_replies">
+                    <input id="auto_approve_replies" name="auto_approve_replies" type="checkbox" value="1" <?php echo $form['auto_approve_replies'] ? 'checked' : ''; ?>>
+                    <span><?php echo h(t('settings.field_auto_approve_replies')); ?></span>
+                </label>
+            </div>
+
             <div class="admin-form-buttons">
                 <button type="submit">
                     <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-settings"></use></svg>
@@ -441,13 +503,26 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
     </main>
 <script>
 (function () {
-    var sel = document.getElementById('email_provider');
-    function update() {
-        document.getElementById('ses-settings').hidden = sel.value !== 'ses';
-        document.getElementById('smtp-settings').hidden = sel.value !== 'smtp';
+    var emailSel = document.getElementById('email_provider');
+    function updateEmail() {
+        document.getElementById('ses-settings').hidden = emailSel.value !== 'ses';
+        document.getElementById('smtp-settings').hidden = emailSel.value !== 'smtp';
     }
-    sel.addEventListener('change', update);
-    update();
+    emailSel.addEventListener('change', updateEmail);
+    updateEmail();
+
+    var wmEnabled = document.getElementById('webmentions_enabled');
+    var wmSection = document.getElementById('webmentions-settings');
+
+    function updateWebmentions() {
+        if (!wmSection || !wmEnabled) return;
+        wmSection.hidden = !wmEnabled.checked;
+    }
+
+    if (wmEnabled && wmSection) {
+        wmEnabled.addEventListener('change', updateWebmentions);
+        updateWebmentions();
+    }
 }());
 </script>
 </body>

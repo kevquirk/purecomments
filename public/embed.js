@@ -22,9 +22,18 @@
         load_error: 'Comments could not be loaded.',
         no_comments: 'No comments yet.',
         author_badge: 'Admin',
-        reply_btn: '↪ Reply',
+        reply_btn: 'Reply',
         replying_to: 'Replying to comment #{id}',
         cancel_reply: 'Cancel reply',
+        likes_count: '{count} Likes',
+        likes_count_singular: '{count} Like',
+        likes_count_plural: '{count} Likes',
+        boosts_count: '{count} Boosts',
+        boosts_count_singular: '{count} Boost',
+        boosts_count_plural: '{count} Boosts',
+        fediverse_badge: 'Fediverse',
+        webmention_badge: 'Webmention',
+        view_source: 'View original',
         form_heading: 'Leave a comment',
         privacy_link: 'Read the comment privacy notice',
         field_name: 'Name',
@@ -41,6 +50,33 @@
     // s is rebuilt after the API responds (with server-translated strings as the base layer).
     // fallbackStrings is used only for the pre-load UI (load button, unavailable message).
     let s = Object.assign({}, fallbackStrings, (window.PureComments && window.PureComments.strings) || {});
+
+    function createSvgIcon(type, className) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('class', 'pc-icon ' + (className || ''));
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('width', '16');
+        svg.setAttribute('height', '16');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', '2');
+        svg.setAttribute('stroke-linecap', 'round');
+        svg.setAttribute('stroke-linejoin', 'round');
+        svg.setAttribute('aria-hidden', 'true');
+
+        if (type === 'heart') {
+            svg.innerHTML = '<path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/>';
+        } else if (type === 'boost') {
+            svg.innerHTML = '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>';
+        } else if (type === 'reply-bubble') {
+            svg.innerHTML = '<path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/>';
+        } else if (type === 'reply') {
+            svg.innerHTML = '<path d="M20 18v-2a4 4 0 0 0-4-4H4"/><path d="m9 17-5-5 5-5"/>';
+        } else if (type === 'cancel') {
+            svg.innerHTML = '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>';
+        }
+        return svg;
+    }
 
     const header = document.createElement('div');
     header.className = 'comments-header';
@@ -118,6 +154,79 @@
 
     contentArea.appendChild(loadButton);
 
+    function renderReactionsSection(reactions) {
+        if (!reactions || typeof reactions !== 'object') {
+            return null;
+        }
+        const likes = Array.isArray(reactions.likes) ? reactions.likes : [];
+        const reposts = Array.isArray(reactions.reposts) ? reactions.reposts : [];
+        if (likes.length === 0 && reposts.length === 0) {
+            return null;
+        }
+
+        const section = document.createElement('div');
+        section.className = 'comments-reactions';
+
+        if (likes.length > 0) {
+            const label = (likes.length === 1 && s.likes_count_singular)
+                ? s.likes_count_singular.replace('{count}', likes.length)
+                : (s.likes_count_plural || s.likes_count || '{count} Likes').replace('{count}', likes.length);
+            section.appendChild(renderReactionGroup('heart', label, likes));
+        }
+        if (reposts.length > 0) {
+            const label = (reposts.length === 1 && s.boosts_count_singular)
+                ? s.boosts_count_singular.replace('{count}', reposts.length)
+                : (s.boosts_count_plural || s.boosts_count || '{count} Boosts').replace('{count}', reposts.length);
+            section.appendChild(renderReactionGroup('boost', label, reposts));
+        }
+
+        return section;
+    }
+
+    function renderReactionGroup(iconType, labelText, items) {
+        const group = document.createElement('div');
+        group.className = 'reactions-group';
+
+        const header = document.createElement('div');
+        header.className = 'reactions-header';
+        header.appendChild(createSvgIcon(iconType, 'reaction-icon'));
+        const countSpan = document.createElement('span');
+        countSpan.className = 'reactions-count';
+        countSpan.textContent = labelText;
+        header.appendChild(countSpan);
+        group.appendChild(header);
+
+        const facepile = document.createElement('div');
+        facepile.className = 'facepile';
+
+        items.forEach(function (item) {
+            const a = document.createElement('a');
+            a.className = 'facepile-item';
+            a.href = item.website || item.source_url || '#';
+            a.title = item.name || 'User';
+            a.target = '_blank';
+            a.rel = 'noopener noreferrer nofollow ugc';
+
+            if (item.avatar_url) {
+                const img = document.createElement('img');
+                img.src = item.avatar_url;
+                img.alt = item.name || 'User';
+                img.className = 'facepile-avatar';
+                img.loading = 'lazy';
+                a.appendChild(img);
+            } else {
+                const placeholder = document.createElement('span');
+                placeholder.className = 'facepile-avatar facepile-initials';
+                placeholder.textContent = (item.name ? item.name.trim().charAt(0).toUpperCase() : '?');
+                a.appendChild(placeholder);
+            }
+            facepile.appendChild(a);
+        });
+
+        group.appendChild(facepile);
+        return group;
+    }
+
     function renderCommentsSection(data) {
         if (data.strings && typeof data.strings === 'object') {
             s = Object.assign({}, fallbackStrings, data.strings, (window.PureComments && window.PureComments.strings) || {});
@@ -139,6 +248,12 @@
             : '';
 
         contentArea.innerHTML = '';
+
+        const reactionsNode = renderReactionsSection(data.reactions);
+        if (reactionsNode) {
+            contentArea.appendChild(reactionsNode);
+        }
+
         const listWrapper = document.createElement('div');
         listWrapper.className = 'comments-thread';
         if (comments.length === 0) {
@@ -186,6 +301,15 @@
         const nameWrapper = document.createElement('div');
         nameWrapper.className = 'comment-meta';
 
+        if (comment.avatar_url) {
+            const avatar = document.createElement('img');
+            avatar.src = comment.avatar_url;
+            avatar.alt = comment.name || 'Avatar';
+            avatar.className = 'comment-avatar';
+            avatar.loading = 'lazy';
+            nameWrapper.appendChild(avatar);
+        }
+
         const nameElement = document.createElement('strong');
         if (comment.website) {
             const link = document.createElement('a');
@@ -206,6 +330,20 @@
             nameWrapper.appendChild(badge);
         }
 
+        if (comment.source_url) {
+            const sourceLink = document.createElement('a');
+            sourceLink.className = 'comment-source-link';
+            sourceLink.href = comment.source_url;
+            sourceLink.target = '_blank';
+            sourceLink.rel = 'noopener noreferrer nofollow';
+            sourceLink.title = s.view_source;
+            sourceLink.appendChild(createSvgIcon('reply-bubble', 'source-icon'));
+            const sourceLabel = document.createElement('span');
+            sourceLabel.textContent = (comment.type === 'reply' || comment.type === 'mention') ? s.fediverse_badge : s.webmention_badge;
+            sourceLink.appendChild(sourceLabel);
+            nameWrapper.appendChild(sourceLink);
+        }
+
         const time = document.createElement('time');
         const isoTimestamp = (comment.created_at || '').replace(' ', 'T') + 'Z';
         time.dateTime = isoTimestamp;
@@ -223,7 +361,10 @@
         actions.className = 'comment-actions';
         const reply = document.createElement('button');
         reply.type = 'button';
-        reply.textContent = s.reply_btn;
+        reply.appendChild(createSvgIcon('reply', 'button-icon'));
+        const replyTextSpan = document.createElement('span');
+        replyTextSpan.textContent = ' ' + s.reply_btn;
+        reply.appendChild(replyTextSpan);
         reply.addEventListener('click', function () {
             const form = container.querySelector('form.comments-form');
             if (!form) {
@@ -231,7 +372,7 @@
             }
             const parentInput = form.querySelector('input[name="parent_id"]');
             const replyBox = form.querySelector('.replying-to');
-            const replyText = replyBox ? replyBox.querySelector('span') : null;
+            const replyText = replyBox ? replyBox.querySelector('.replying-text') : null;
             if (!parentInput || !replyBox || !replyText) {
                 return;
             }
@@ -271,10 +412,15 @@
         const replying = document.createElement('div');
         replying.className = 'replying-to hidden';
         const replyText = document.createElement('span');
+        replyText.className = 'replying-text';
         replying.appendChild(replyText);
         const cancelReply = document.createElement('button');
         cancelReply.type = 'button';
-        cancelReply.textContent = s.cancel_reply;
+        cancelReply.className = 'button cancel-reply';
+        cancelReply.appendChild(createSvgIcon('cancel', 'button-icon'));
+        const cancelTextSpan = document.createElement('span');
+        cancelTextSpan.textContent = ' ' + s.cancel_reply;
+        cancelReply.appendChild(cancelTextSpan);
         cancelReply.addEventListener('click', function () {
             const parentInput = form.querySelector('input[name="parent_id"]');
             if (parentInput) {

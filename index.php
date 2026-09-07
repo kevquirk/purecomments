@@ -17,6 +17,7 @@ require __DIR__ . '/includes/db.php';
 require __DIR__ . '/includes/render.php';
 require __DIR__ . '/includes/ses.php';
 require __DIR__ . '/includes/parsedown.php';
+require __DIR__ . '/includes/webmention.php';
 require_once __DIR__ . '/includes/i18n.php';
 pc_set_language((string)($config['language'] ?? 'en'));
 
@@ -75,8 +76,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $messages[] = t('dashboard.msg_published');
                 if ($comment['parent_id']) {
                     $parent = fetch_comment_by_id($config, (int)$comment['parent_id']);
-                    if ($parent && !empty($parent['email_plain'])) {
-                        send_reply_notification($config, $parent, $comment);
+                    if ($parent) {
+                        if (!empty($parent['email_plain'])) {
+                            send_reply_notification($config, $parent, $comment);
+                        }
+                        if (!empty($parent['source_url'])) {
+                            $postUrl = build_post_url($config, $comment['post_slug']);
+                            $replySourceUrl = $postUrl . '#comment-' . $comment['id'];
+                            send_outgoing_webmention($replySourceUrl, $parent['source_url'], $config);
+                        }
                     }
                 }
             } else {
@@ -117,6 +125,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             : t('dashboard.msg_reply_posted');
                         if (!empty($comment['email_plain'])) {
                             send_reply_notification($config, $comment, $reply);
+                        }
+                        if (!empty($comment['source_url'])) {
+                            $baseUrl = rtrim((string)($config['moderation']['base_url'] ?? ''), '/');
+                            $replySourceUrl = $baseUrl . '/comment.php?id=' . ($reply['id'] ?? '');
+                            send_outgoing_webmention($replySourceUrl, $comment['source_url'], $config);
                         }
                     } else {
                         $errors[] = t('dashboard.err_save_reply');
