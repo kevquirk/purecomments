@@ -305,15 +305,18 @@
 #comments .facepile-avatar {
   width: 28px;
   height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  max-width: 28px;
+  max-height: 28px;
   border-radius: 50%;
   object-fit: cover;
   border: 1px solid var(--comments-border);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-block;
   margin: 0;
   padding: 0;
   vertical-align: middle;
+  box-sizing: border-box;
 }
 
 #comments .facepile-initials {
@@ -322,6 +325,9 @@
   font-size: 0.75rem;
   font-weight: 700;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #comments .comment-avatar {
