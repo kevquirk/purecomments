@@ -63,24 +63,6 @@ function resolve_target_slug(string $targetUrl, array $config): ?string
 
     // 4. If target URL is the root site/homepage (empty path)
     if ($cleanedPath === '') {
-        if (!empty($config['post_titles']) && is_array($config['post_titles'])) {
-            $firstSlug = array_key_first($config['post_titles']);
-            if ($firstSlug !== null && validate_post_slug($firstSlug)) {
-                return $firstSlug;
-            }
-        }
-
-        try {
-            $pdo = db($config);
-            $stmt = $pdo->query("SELECT post_slug FROM comments ORDER BY id DESC LIMIT 1");
-            $row = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : false;
-            if ($row && !empty($row['post_slug']) && validate_post_slug($row['post_slug'])) {
-                return $row['post_slug'];
-            }
-        } catch (Throwable $e) {
-            // ignore DB lookup failure
-        }
-
         return 'home';
     }
 
