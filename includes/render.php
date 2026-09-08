@@ -45,6 +45,26 @@ function build_post_url(array $config, string $slug): string
     return $base . '/' . rawurlencode($slug) . '/';
 }
 
+function extract_fediverse_handle_from_url(string $url): ?string
+{
+    $parsed = parse_url($url);
+    if (!isset($parsed['host'])) {
+        return null;
+    }
+    $host = preg_replace('/^www\./i', '', strtolower($parsed['host']));
+    $path = trim($parsed['path'] ?? '', '/');
+
+    if (preg_match('#^@([a-zA-Z0-9_.-]+)#', $path, $m)) {
+        return '@' . $m[1] . '@' . $host;
+    }
+
+    if (preg_match('#^(?:users|u)/([a-zA-Z0-9_.-]+)#i', $path, $m)) {
+        return '@' . $m[1] . '@' . $host;
+    }
+
+    return null;
+}
+
 function render_admin_comments_table(
     array $comments,
     string $csrfToken,
@@ -195,14 +215,13 @@ function render_admin_comments_table(
                                     $replyPrefill = '';
                                     if (!empty($comment['type']) && in_array($comment['type'], ['reply', 'mention'], true) && !empty($comment['name'])) {
                                         $rawName = trim((string)$comment['name']);
-                                        if ($rawName !== '') {
-                                            $handle = str_starts_with($rawName, '@') ? $rawName : '@' . $rawName;
-                                            $profileUrl = !empty($comment['website']) ? trim((string)$comment['website']) : '';
-                                            if ($profileUrl !== '') {
-                                                $replyPrefill = '[' . $handle . '](' . $profileUrl . ') ';
-                                            } else {
-                                                $replyPrefill = $handle . ' ';
-                                            }
+                                        $profileUrl = !empty($comment['website']) ? trim((string)$comment['website']) : '';
+                                        $fediHandle = $profileUrl !== '' ? extract_fediverse_handle_from_url($profileUrl) : null;
+
+                                        if ($fediHandle !== null) {
+                                            $replyPrefill = '[' . $fediHandle . '](' . $profileUrl . ') ';
+                                        } elseif ($rawName !== '') {
+                                            $replyPrefill = ($profileUrl !== '' ? '[' . $rawName . '](' . $profileUrl . ')' : $rawName) . ' ';
                                         }
                                     }
                                 ?>
