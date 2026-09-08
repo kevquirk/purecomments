@@ -29,8 +29,11 @@ if (!$comment || $comment['status'] !== 'published') {
 }
 
 $baseUrl = rtrim((string)($config['moderation']['base_url'] ?? ''), '/');
-$commentUrl = $baseUrl . '/comment.php?id=' . $comment['id'];
+$publicBaseUrl = rtrim((string)($config['post_base_url'] ?? ''), '/');
+$canonicalBaseUrl = $publicBaseUrl !== '' ? $publicBaseUrl : $baseUrl;
+$commentUrl = $canonicalBaseUrl . '/comment.php?id=' . $comment['id'];
 $webmentionEndpoint = $baseUrl . '/api/webmention';
+$fediverseProfileUrl = trim((string)($config['webmentions']['fediverse_profile_url'] ?? ''));
 
 // Find parent target URL if this is a reply
 $inReplyToUrl = null;
@@ -54,11 +57,17 @@ header('Content-Type: text/html; charset=utf-8');
     <title>Comment #<?php echo (int)$comment['id']; ?> by <?php echo htmlspecialchars($authorName, ENT_QUOTES, 'UTF-8'); ?></title>
     <link rel="canonical" href="<?php echo htmlspecialchars($commentUrl, ENT_QUOTES, 'UTF-8'); ?>">
     <link rel="webmention" href="<?php echo htmlspecialchars($webmentionEndpoint, ENT_QUOTES, 'UTF-8'); ?>">
+    <?php if ($fediverseProfileUrl !== '') : ?>
+        <link rel="me" href="<?php echo htmlspecialchars($fediverseProfileUrl, ENT_QUOTES, 'UTF-8'); ?>">
+    <?php endif; ?>
 </head>
 <body>
     <article class="h-entry" id="comment-<?php echo (int)$comment['id']; ?>">
         <div class="p-author h-card">
             <a class="p-name u-url" href="<?php echo htmlspecialchars($authorUrl, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($authorName, ENT_QUOTES, 'UTF-8'); ?></a>
+            <?php if ($fediverseProfileUrl !== '') : ?>
+                <a class="u-url" rel="me" href="<?php echo htmlspecialchars($fediverseProfileUrl, ENT_QUOTES, 'UTF-8'); ?>" hidden></a>
+            <?php endif; ?>
             <?php if ($authorAvatar !== '') : ?>
                 <img class="u-photo" src="<?php echo htmlspecialchars($authorAvatar, ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($authorName, ENT_QUOTES, 'UTF-8'); ?>" />
             <?php endif; ?>

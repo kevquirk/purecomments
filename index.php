@@ -128,7 +128,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                         if (!empty($comment['source_url'])) {
                             $baseUrl = rtrim((string)($config['moderation']['base_url'] ?? ''), '/');
-                            $replySourceUrl = $baseUrl . '/comment.php?id=' . ($reply['id'] ?? '');
+                            $publicBaseUrl = rtrim((string)($config['post_base_url'] ?? ''), '/');
+                            $canonicalBaseUrl = $publicBaseUrl !== '' ? $publicBaseUrl : $baseUrl;
+                            $replySourceUrl = $canonicalBaseUrl . '/comment.php?id=' . ($reply['id'] ?? '');
                             send_outgoing_webmention($replySourceUrl, $comment['source_url'], $config);
                         }
                     } else {
