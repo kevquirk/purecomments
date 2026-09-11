@@ -600,36 +600,17 @@ function is_self_webmention(array $config, array $fetchResult): bool
         if ($authorWebsite !== '' && rtrim($authorWebsite, '/') === $cleanConfigUrl) {
             return true;
         }
-        if ($sourceUrl !== '' && (rtrim($sourceUrl, '/') === $cleanConfigUrl || str_starts_with($sourceUrl, $cleanConfigUrl . '/'))) {
+        // If source URL is a native status posted under the author profile (not a brid.gy proxy URL)
+        if ($sourceUrl !== '' && stripos($sourceUrl, 'brid.gy/') === false && str_starts_with($sourceUrl, $cleanConfigUrl . '/')) {
             return true;
         }
     }
 
-    // 2. Handle matching (e.g. @kev@fosstodon.org)
-    if ($authorFedHandle !== null) {
-        $sourceHandle = ($authorWebsite !== '' ? extract_fediverse_handle_from_url($authorWebsite) : null)
-            ?? ($sourceUrl !== '' ? extract_fediverse_handle_from_url($sourceUrl) : null);
+    // 2. Handle matching for author website / profile URL
+    if ($authorFedHandle !== null && $authorWebsite !== '') {
+        $sourceHandle = extract_fediverse_handle_from_url($authorWebsite);
         if ($sourceHandle !== null && strcasecmp($sourceHandle, $authorFedHandle) === 0) {
             return true;
-        }
-
-        // Check if Bridgy proxy URL contains this fediverse handle
-        if (stripos($sourceUrl, 'brid.gy/') !== false) {
-            $cleanHandle = ltrim($authorFedHandle, '@');
-            if (stripos($sourceUrl, $cleanHandle) !== false || stripos($sourceUrl, $authorFedHandle) !== false) {
-                if (preg_match('#brid\.gy/(?:comment|repost|like|publish|post)/mastodon/@?([^/@]+)@([^/@]+)#i', $sourceUrl, $m)) {
-                    $bridgyHandle = '@' . $m[1] . '@' . strtolower($m[2]);
-                    if (strcasecmp($bridgyHandle, $authorFedHandle) === 0) {
-                        return true;
-                    }
-                }
-                if (preg_match('#brid\.gy/(?:comment|repost|like|publish|post)/mastodon/([^/@]+)/([^/@]+)#i', $sourceUrl, $m)) {
-                    $bridgyHandle = '@' . $m[2] . '@' . strtolower($m[1]);
-                    if (strcasecmp($bridgyHandle, $authorFedHandle) === 0) {
-                        return true;
-                    }
-                }
-            }
         }
     }
 
