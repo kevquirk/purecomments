@@ -47,6 +47,7 @@ return [
         'search_btn'                => 'Cerca',
         'search_active'             => 'Risultati trovati per: {query}',
         'search_clear_btn'          => 'Cancella ricerca',
+        'show_reactions'            => 'Mostra condivisioni e «mi piace»',
     ],
 
     'comments' => [

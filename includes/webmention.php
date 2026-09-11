@@ -582,3 +582,74 @@ function send_outgoing_webmention(string $sourceUrl, string $targetUrl, array $c
     $res = @file_get_contents($endpoint, false, $context);
     return is_string($res);
 }
+
+/**
+ * Determines whether an incoming webmention originates from the site author (self-mention / loopback).
+ */
+function is_self_webmention(array $config, array $fetchResult): bool
+{
+    $fediverseProfileUrl = trim((string)($config['webmentions']['fediverse_profile_url'] ?? ''));
+    $authorFedHandle = $fediverseProfileUrl !== '' ? extract_fediverse_handle_from_url($fediverseProfileUrl) : null;
+
+    $authorWebsite = trim((string)($fetchResult['website'] ?? ''));
+    $sourceUrl = trim((string)($fetchResult['source_url'] ?? ''));
+
+    // 1. Direct URL match with configured Fediverse profile URL
+    if ($fediverseProfileUrl !== '') {
+        $cleanConfigUrl = rtrim($fediverseProfileUrl, '/');
+        if ($authorWebsite !== '' && rtrim($authorWebsite, '/') === $cleanConfigUrl) {
+            return true;
+        }
+        if ($sourceUrl !== '' && (rtrim($sourceUrl, '/') === $cleanConfigUrl || str_starts_with($sourceUrl, $cleanConfigUrl . '/'))) {
+            return true;
+        }
+    }
+
+    // 2. Handle matching (e.g. @kev@fosstodon.org)
+    if ($authorFedHandle !== null) {
+        $sourceHandle = ($authorWebsite !== '' ? extract_fediverse_handle_from_url($authorWebsite) : null)
+            ?? ($sourceUrl !== '' ? extract_fediverse_handle_from_url($sourceUrl) : null);
+        if ($sourceHandle !== null && strcasecmp($sourceHandle, $authorFedHandle) === 0) {
+            return true;
+        }
+
+        // Check if Bridgy proxy URL contains this fediverse handle
+        if (stripos($sourceUrl, 'brid.gy/') !== false) {
+            $cleanHandle = ltrim($authorFedHandle, '@');
+            if (stripos($sourceUrl, $cleanHandle) !== false || stripos($sourceUrl, $authorFedHandle) !== false) {
+                if (preg_match('#brid\.gy/(?:comment|repost|like|publish|post)/mastodon/@?([^/@]+)@([^/@]+)#i', $sourceUrl, $m)) {
+                    $bridgyHandle = '@' . $m[1] . '@' . strtolower($m[2]);
+                    if (strcasecmp($bridgyHandle, $authorFedHandle) === 0) {
+                        return true;
+                    }
+                }
+                if (preg_match('#brid\.gy/(?:comment|repost|like|publish|post)/mastodon/([^/@]+)/([^/@]+)#i', $sourceUrl, $m)) {
+                    $bridgyHandle = '@' . $m[2] . '@' . strtolower($m[1]);
+                    if (strcasecmp($bridgyHandle, $authorFedHandle) === 0) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    // 3. Check if source originated from this site's own domain (self-referencing webmention)
+    $postBaseUrl = trim((string)($config['post_base_url'] ?? ''));
+    $modBaseUrl = trim((string)($config['moderation']['base_url'] ?? ''));
+    foreach ([$postBaseUrl, $modBaseUrl] as $baseUrl) {
+        if ($baseUrl !== '') {
+            $baseHost = parse_url($baseUrl, PHP_URL_HOST);
+            $sourceHost = parse_url($sourceUrl, PHP_URL_HOST);
+            $websiteHost = $authorWebsite !== '' ? parse_url($authorWebsite, PHP_URL_HOST) : null;
+            if ($baseHost && $sourceHost && strcasecmp($baseHost, $sourceHost) === 0) {
+                return true;
+            }
+            if ($baseHost && $websiteHost && strcasecmp($baseHost, $websiteHost) === 0) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+

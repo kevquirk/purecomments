@@ -50,6 +50,7 @@ return [
         'search_btn'                => 'Caută',
         'search_active'             => 'Se afișează rezultate pentru: {query}',
         'search_clear_btn'          => 'Șterge căutarea',
+        'show_reactions'            => 'Afișează redistribuiri și aprecieri',
     ],
 
     'comments' => [

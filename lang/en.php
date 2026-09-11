@@ -47,6 +47,7 @@ return [
         'search_btn'                => 'Search',
         'search_active'             => 'Showing results for: {query}',
         'search_clear_btn'          => 'Clear search',
+        'show_reactions'            => 'Show boosts and likes',
     ],
 
     'comments' => [

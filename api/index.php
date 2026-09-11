@@ -153,6 +153,14 @@ function handle_webmention_endpoint(array $config): void
         respond_json(['error' => $fetchResult['error'] ?? 'Failed to verify webmention source'], 400);
     }
 
+    if (is_self_webmention($config, $fetchResult)) {
+        respond_json([
+            'ok' => true,
+            'message' => 'Ignored self-mention from author profile',
+            'status' => 'ignored',
+        ], 202);
+    }
+
     $autoApproveReactions = (bool)($config['webmentions']['auto_approve_reactions'] ?? true);
     $autoApproveReplies = (bool)($config['webmentions']['auto_approve_replies'] ?? false);
 
@@ -173,23 +181,9 @@ function handle_webmention_endpoint(array $config): void
         'source_url' => $fetchResult['source_url'],
     ]);
 
-    if ($status === 'pending' && !empty($config['moderation']['notify_email'])) {
+    if ($status === 'pending') {
         $postTitle = resolve_post_title($slug, $config);
-        $moderationLink = rtrim((string)($config['moderation']['base_url'] ?? ''), '/') . '/';
-        $subject = t('notifications.moderation_subject');
-        $bodyText = t('notifications.moderation_body', [
-            'post'    => $postTitle,
-            'name'    => $fetchResult['name'],
-            'content' => $fetchResult['content_md'],
-            'url'     => $moderationLink,
-        ]);
-        if (!empty($config['smtp']['host'])) {
-            require_once __DIR__ . '/../includes/smtpmail.php';
-            smtp_send_email($config, (string)$config['moderation']['notify_email'], $subject, $bodyText);
-        } elseif (!empty($config['aws']['access_key'])) {
-            require_once __DIR__ . '/../includes/ses.php';
-            ses_send_email($config, (string)$config['moderation']['notify_email'], $subject, $bodyText);
-        }
+        send_moderation_notification($config, $postTitle, $fetchResult['name'], $fetchResult['content_md']);
     }
 
     respond_json([
@@ -278,23 +272,7 @@ function handle_submit_comment(array $config): void
 
     $commentId = insert_comment($config, $data);
 
-    if (!empty($config['moderation']['notify_email'])) {
-        $moderationLink = rtrim((string)($config['moderation']['base_url'] ?? ''), '/') . '/';
-        $subject = t('notifications.moderation_subject');
-        $bodyText = t('notifications.moderation_body', [
-            'post'    => $postTitle,
-            'name'    => $name,
-            'content' => $content,
-            'url'     => $moderationLink,
-        ]);
-        if (!empty($config['smtp']['host'])) {
-            require_once __DIR__ . '/../includes/smtpmail.php';
-            smtp_send_email($config, (string)$config['moderation']['notify_email'], $subject, $bodyText);
-        } elseif (!empty($config['aws']['access_key'])) {
-            require_once __DIR__ . '/../includes/ses.php';
-            ses_send_email($config, (string)$config['moderation']['notify_email'], $subject, $bodyText);
-        }
-    }
+    send_moderation_notification($config, $postTitle, $name, $content);
 
     respond_json([
         'success' => true,
@@ -438,3 +416,69 @@ function missing_required_config_keys(array $config): array
     }
     return $missing;
 }
+
+function send_moderation_notification(array $config, string $postTitle, string $authorName, string $contentMd): void
+{
+    $notifyEmail = trim((string)($config['moderation']['notify_email'] ?? ''));
+    if ($notifyEmail === '') {
+        return;
+    }
+
+    $cooldownSeconds = 5 * 60; // 5-minute DoS protection window
+    if (!can_send_moderation_notification($config, $cooldownSeconds)) {
+        return;
+    }
+
+    $moderationLink = rtrim((string)($config['moderation']['base_url'] ?? ''), '/') . '/';
+    $subject = t('notifications.moderation_subject');
+    $bodyText = t('notifications.moderation_body', [
+        'post'    => $postTitle,
+        'name'    => $authorName,
+        'content' => $contentMd,
+        'url'     => $moderationLink,
+    ]);
+
+    $sent = false;
+    if (!empty($config['smtp']['host'])) {
+        require_once __DIR__ . '/../includes/smtpmail.php';
+        $sent = smtp_send_email($config, $notifyEmail, $subject, $bodyText);
+    } elseif (!empty($config['aws']['access_key'])) {
+        require_once __DIR__ . '/../includes/ses.php';
+        $sent = ses_send_email($config, $notifyEmail, $subject, $bodyText);
+    }
+
+    if ($sent) {
+        record_moderation_notification_sent($config);
+    }
+}
+
+function moderation_email_throttle_path(array $config): string
+{
+    $dbPath = (string)($config['db_path'] ?? (__DIR__ . '/../db/comments.sqlite'));
+    return dirname($dbPath) . '/moderation-email-throttle.json';
+}
+
+function can_send_moderation_notification(array $config, int $cooldownSeconds = 300): bool
+{
+    $path = moderation_email_throttle_path($config);
+    if (!is_file($path)) {
+        return true;
+    }
+    $raw = @file_get_contents($path);
+    if ($raw === false || $raw === '') {
+        return true;
+    }
+    $data = json_decode($raw, true);
+    if (!is_array($data) || empty($data['last_sent']) || !is_int($data['last_sent'])) {
+        return true;
+    }
+    return (time() - $data['last_sent']) >= $cooldownSeconds;
+}
+
+function record_moderation_notification_sent(array $config): void
+{
+    $path = moderation_email_throttle_path($config);
+    $data = ['last_sent' => time()];
+    @file_put_contents($path, json_encode($data), LOCK_EX);
+}
+

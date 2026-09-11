@@ -233,7 +233,8 @@ function fetch_comments_by_status(
     ?int $limit = null,
     int $offset = 0,
     ?string $slug = null,
-    ?string $search = null
+    ?string $search = null,
+    bool $includeReactions = false
 ): array
 {
     $pdo = db($config);
@@ -241,6 +242,9 @@ function fetch_comments_by_status(
     $offset = max(0, $offset);
 
     $where = 'WHERE status = :status';
+    if (!$includeReactions) {
+        $where .= " AND (type IS NULL OR type NOT IN ('like', 'repost'))";
+    }
     if ($slug !== null && $slug !== '') {
         $where .= ' AND post_slug = :slug';
     }
@@ -281,14 +285,14 @@ function fetch_comments_by_status(
     return $rows;
 }
 
-function fetch_pending_comments(array $config, ?int $limit = null, int $offset = 0, ?string $slug = null, ?string $search = null): array
+function fetch_pending_comments(array $config, ?int $limit = null, int $offset = 0, ?string $slug = null, ?string $search = null, bool $includeReactions = false): array
 {
-    return fetch_comments_by_status($config, 'pending', 'ASC', $limit, $offset, $slug, $search);
+    return fetch_comments_by_status($config, 'pending', 'ASC', $limit, $offset, $slug, $search, $includeReactions);
 }
 
-function fetch_published_comments_admin(array $config, ?int $limit = null, int $offset = 0, ?string $slug = null, ?string $search = null): array
+function fetch_published_comments_admin(array $config, ?int $limit = null, int $offset = 0, ?string $slug = null, ?string $search = null, bool $includeReactions = false): array
 {
-    return fetch_comments_by_status($config, 'published', 'DESC', $limit, $offset, $slug, $search);
+    return fetch_comments_by_status($config, 'published', 'DESC', $limit, $offset, $slug, $search, $includeReactions);
 }
 
 function count_comments_by_status(array $config, string $status): int

@@ -178,28 +178,105 @@ main.admin-container {
     margin: 3rem 0;
 }
 
-.admin-search {
+.admin-search-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.admin-search,
+.admin-search-row {
     display: flex;
     gap: 0.5rem;
     align-items: flex-end;
     flex-wrap: wrap;
 }
 
-.admin-search input[type="search"] {
+.admin-search input[type="search"],
+.admin-search-row input[type="search"] {
     flex: 1 1 16rem;
     margin: 0;
     padding: 10px 12px;
     min-width: 0;
 }
 
-.admin-search button {
+.admin-search button,
+.admin-search-row button {
     margin: 0;
     white-space: nowrap;
 }
 
-.admin-search .button-clear {
+.admin-search .button-clear,
+.admin-search-row .button-clear {
     margin: 0;
     padding: 8px 12px;
+}
+
+.admin-filters-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.rocker-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.95rem;
+}
+
+.rocker-switch input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0;
+    pointer-events: none;
+}
+
+.rocker-track {
+    position: relative;
+    display: inline-block;
+    width: 2.75rem;
+    height: 1.5rem;
+    background: var(--input-bg);
+    border: var(--standard-border);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.rocker-track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: calc(1.5rem - 8px);
+    height: calc(1.5rem - 8px);
+    background: var(--text);
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s ease;
+}
+
+.rocker-switch input[type="checkbox"]:checked + .rocker-track {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.rocker-switch input[type="checkbox"]:checked + .rocker-track::after {
+    transform: translateX(1.25rem);
+    background: #fff;
+}
+
+.rocker-switch input[type="checkbox"]:focus-visible + .rocker-track {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.rocker-label {
+    font-weight: bold;
+    font-size: 0.95rem;
 }
 
 .sr-only {

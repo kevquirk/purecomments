@@ -47,12 +47,26 @@ function build_post_url(array $config, string $slug): string
 
 function extract_fediverse_handle_from_url(string $url): ?string
 {
+    $url = trim($url);
+    if (preg_match('/^@?([a-zA-Z0-9_.-]+)@([a-zA-Z0-9_.-]+\.[a-zA-Z]{2,})$/', $url, $m)) {
+        return '@' . $m[1] . '@' . strtolower($m[2]);
+    }
+
     $parsed = parse_url($url);
     if (!isset($parsed['host'])) {
         return null;
     }
     $host = preg_replace('/^www\./i', '', strtolower($parsed['host']));
     $path = trim($parsed['path'] ?? '', '/');
+
+    if ($host === 'brid.gy') {
+        if (preg_match('#^(?:comment|repost|like|publish|post)/mastodon/@?([^/@]+)@([^/@]+)#i', $path, $m)) {
+            return '@' . $m[1] . '@' . strtolower($m[2]);
+        }
+        if (preg_match('#^(?:comment|repost|like|publish|post)/mastodon/([^/@]+)/([^/@]+)#i', $path, $m)) {
+            return '@' . $m[2] . '@' . strtolower($m[1]);
+        }
+    }
 
     if (preg_match('#^@([a-zA-Z0-9_.-]+)#', $path, $m)) {
         return '@' . $m[1] . '@' . $host;
@@ -73,7 +87,8 @@ function render_admin_comments_table(
     int $pendingPage,
     int $publishedPage,
     string $filterSlug = '',
-    int $commenterRefId = 0
+    int $commenterRefId = 0,
+    bool $showReactions = false
 ): string
 {
     [$primaryComments, $repliesByParent] = split_admin_comments_for_admin_view($comments, $config);
@@ -125,7 +140,7 @@ function render_admin_comments_table(
                                 <span class="comment-author-email"><?php echo e($comment['email_plain']); ?></span>
                             <?php endif; ?>
                             <?php if ($commenterRefId === 0) : ?>
-                                <a href="?commenter=<?php echo e((string)$comment['id']); ?>" class="commenter-filter-link"><?php echo e(t('comments.filter_commenter_link')); ?></a>
+                                <a href="?commenter=<?php echo e((string)$comment['id']) . ($showReactions ? '&reactions=1' : ''); ?>" class="commenter-filter-link"><?php echo e(t('comments.filter_commenter_link')); ?></a>
                             <?php endif; ?>
                         </span>
                         <span class="comment-summary-preview"><?php echo e(admin_comment_preview_text($comment['content_html'], $comment['type'] ?? 'comment')); ?></span>
@@ -137,7 +152,7 @@ function render_admin_comments_table(
                                 <?php echo e($postTitle); ?>
                             </a>
                             <?php if ($filterSlug !== $comment['post_slug']) : ?>
-                                <a href="?slug=<?php echo e(rawurlencode($comment['post_slug'])); ?>" class="post-filter-link"><?php echo e(t('comments.filter_link')); ?></a>
+                                <a href="?slug=<?php echo e(rawurlencode($comment['post_slug'])) . ($showReactions ? '&reactions=1' : ''); ?>" class="post-filter-link"><?php echo e(t('comments.filter_link')); ?></a>
                             <?php endif; ?>
                         </span>
                         <time datetime="<?php echo e(str_replace(' ', 'T', $comment['created_at']) . 'Z'); ?>">
@@ -175,7 +190,8 @@ function render_admin_comments_table(
                             $csrfToken,
                             $context,
                             $pendingPage,
-                            $publishedPage
+                            $publishedPage,
+                            $showReactions
                         ); ?>
 
                         <form method="post" class="admin-action">
@@ -184,6 +200,9 @@ function render_admin_comments_table(
                             <input type="hidden" name="context" value="<?php echo e($context); ?>">
                             <input type="hidden" name="pending_page" value="<?php echo e((string)$pendingPage); ?>">
                             <input type="hidden" name="published_page" value="<?php echo e((string)$publishedPage); ?>">
+                            <?php if ($showReactions) : ?>
+                                <input type="hidden" name="reactions" value="1">
+                            <?php endif; ?>
                             <?php if ($context === 'pending') : ?>
                                 <button type="submit" name="action" value="publish">
                                     <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-login"></use></svg>
@@ -288,7 +307,8 @@ function render_admin_author_replies(
     string $csrfToken,
     string $context,
     int $pendingPage,
-    int $publishedPage
+    int $publishedPage,
+    bool $showReactions = false
 ): string
 {
     $flatReplies = flatten_admin_replies_for_thread($parentCommentId, $repliesByParent);
@@ -320,6 +340,9 @@ function render_admin_author_replies(
                     <input type="hidden" name="context" value="<?php echo e($context); ?>">
                     <input type="hidden" name="pending_page" value="<?php echo e((string)$pendingPage); ?>">
                     <input type="hidden" name="published_page" value="<?php echo e((string)$publishedPage); ?>">
+                    <?php if ($showReactions) : ?>
+                        <input type="hidden" name="reactions" value="1">
+                    <?php endif; ?>
                     <?php if ($context === 'pending') : ?>
                         <button type="submit" name="action" value="publish">
                             <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-login"></use></svg>
@@ -339,6 +362,9 @@ function render_admin_author_replies(
                         <input type="hidden" name="context" value="<?php echo e($context); ?>">
                         <input type="hidden" name="pending_page" value="<?php echo e((string)$pendingPage); ?>">
                         <input type="hidden" name="published_page" value="<?php echo e((string)$publishedPage); ?>">
+                        <?php if ($showReactions) : ?>
+                            <input type="hidden" name="reactions" value="1">
+                        <?php endif; ?>
                         <label>
                             <span><?php echo e(t('comments.reply_label')); ?></span>
                             <textarea name="reply_content" rows="2" placeholder="<?php echo e(t('comments.reply_placeholder')); ?>" class="auto-grow"></textarea>
@@ -393,7 +419,8 @@ function render_admin_pagination(
     int $publishedPage,
     string $filterSlug = '',
     int $commenterRefId = 0,
-    string $searchQuery = ''
+    string $searchQuery = '',
+    bool $showReactions = false
 ): string
 {
     if ($totalPages <= 1) {
@@ -405,7 +432,7 @@ function render_admin_pagination(
     $windowStart = max(1, $currentPage - 2);
     $windowEnd = min($totalPages, $currentPage + 2);
 
-    $buildHref = static function (int $page) use ($targetIsPending, $pendingPage, $publishedPage, $anchor, $filterSlug, $commenterRefId, $searchQuery): string {
+    $buildHref = static function (int $page) use ($targetIsPending, $pendingPage, $publishedPage, $anchor, $filterSlug, $commenterRefId, $searchQuery, $showReactions): string {
         $query = [
             'pending_page' => $targetIsPending ? $page : $pendingPage,
             'published_page' => $targetIsPending ? $publishedPage : $page,
@@ -418,6 +445,9 @@ function render_admin_pagination(
         }
         if ($searchQuery !== '') {
             $query['q'] = $searchQuery;
+        }
+        if ($showReactions) {
+            $query['reactions'] = '1';
         }
         return '?' . http_build_query($query) . $anchor;
     };
