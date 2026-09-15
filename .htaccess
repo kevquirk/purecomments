@@ -5,8 +5,12 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Block access to sensitive directories and files
+    RewriteRule ^db/ - [F,L]
+    RewriteRule ^backup/ - [F,L]
+
     # Restrict root admin endpoints by IP, but do not block /api/index.php.
-    # RewriteCond %{REQUEST_URI} ^/$|^/(index\.php|login\.php|settings\.php)$ [NC]
+    # RewriteCond %{REQUEST_URI} ^/$|^/(index\.php|login\.php|settings\.php|updates\.php)$ [NC]
     # RewriteCond %{REMOTE_ADDR} !^11\.22\.33\.44$
     # RewriteCond %{REMOTE_ADDR} !^55\.66\.77\.88$
     # RewriteRule ^ - [F,L]
