@@ -201,6 +201,7 @@ function parse_microformats_or_html(string $html, string $sourceUrl, string $tar
     $contentMd = '';
 
     // 1. Check Schema.org / ActivityStreams JSON-LD
+    $jsonLdImages = [];
     $jsonLdNodes = $xpath->query('//script[@type="application/ld+json"]');
     if ($jsonLdNodes && $jsonLdNodes->length > 0) {
         foreach ($jsonLdNodes as $node) {
@@ -228,6 +229,25 @@ function parse_microformats_or_html(string $html, string $sourceUrl, string $tar
                         $contentHtml = (string)$item['text'];
                     } elseif ($contentHtml === '' && !empty($item['articleBody'])) {
                         $contentHtml = '<p>' . nl2br(htmlspecialchars((string)$item['articleBody'], ENT_QUOTES, 'UTF-8')) . '</p>';
+                    }
+                    if (!empty($item['image']) && is_string($item['image'])) {
+                        $jsonLdImages[] = $item['image'];
+                    } elseif (!empty($item['image']) && is_array($item['image'])) {
+                        $imgUrl = $item['image']['url'] ?? $item['image']['contentUrl'] ?? '';
+                        if (is_string($imgUrl) && $imgUrl !== '') {
+                            $jsonLdImages[] = $imgUrl;
+                        }
+                    }
+                    if (!empty($item['attachment']) && is_array($item['attachment'])) {
+                        $attachments = isset($item['attachment'][0]) ? $item['attachment'] : [$item['attachment']];
+                        foreach ($attachments as $att) {
+                            if (is_array($att)) {
+                                $attUrl = $att['url'] ?? $att['contentUrl'] ?? '';
+                                if (is_string($attUrl) && $attUrl !== '') {
+                                    $jsonLdImages[] = $attUrl;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -340,6 +360,54 @@ function parse_microformats_or_html(string $html, string $sourceUrl, string $tar
                 }
             }
         }
+
+        // Extract attached media / entry photos outside p-author / h-card
+        $entryPhotoNodes = $xpath->query('//img[contains(concat(" ", normalize-space(@class), " "), " u-photo ") and not(ancestor::*[contains(concat(" ", normalize-space(@class), " "), " p-author ") or contains(concat(" ", normalize-space(@class), " "), " h-card ")])] | //a[contains(concat(" ", normalize-space(@class), " "), " u-photo ") and not(ancestor::*[contains(concat(" ", normalize-space(@class), " "), " p-author ") or contains(concat(" ", normalize-space(@class), " "), " h-card ")])]');
+        if ($entryPhotoNodes && $entryPhotoNodes->length > 0) {
+            foreach ($entryPhotoNodes as $photoNode) {
+                $src = '';
+                $alt = '';
+                if ($photoNode->nodeName === 'img') {
+                    $src = $photoNode->getAttribute('src') ?: $photoNode->getAttribute('data-src');
+                    $alt = $photoNode->getAttribute('alt');
+                } elseif ($photoNode->nodeName === 'a') {
+                    $childImgs = $photoNode->getElementsByTagName('img');
+                    if ($childImgs && $childImgs->length > 0) {
+                        $childImg = $childImgs->item(0);
+                        $src = $childImg->getAttribute('src') ?: $childImg->getAttribute('data-src') ?: $photoNode->getAttribute('href');
+                        $alt = $childImg->getAttribute('alt');
+                    } else {
+                        $src = $photoNode->getAttribute('href');
+                    }
+                }
+                if ($src !== '') {
+                    if (!preg_match('#^https?://#i', $src)) {
+                        $src = resolve_relative_url($sourceUrl, $src);
+                    }
+                    if ($src !== '' && ($authorAvatar === '' || $src !== $authorAvatar)) {
+                        if (stripos($contentHtml, $src) === false) {
+                            $escapedSrc = htmlspecialchars($src, ENT_QUOTES, 'UTF-8');
+                            $escapedAlt = htmlspecialchars($alt ?: '', ENT_QUOTES, 'UTF-8');
+                            $contentHtml .= '<p><img src="' . $escapedSrc . '" alt="' . $escapedAlt . '" loading="lazy"></p>';
+                        }
+                    }
+                }
+            }
+        }
+
+        // Also check any JSON-LD images not yet included
+        foreach ($jsonLdImages as $jlImg) {
+            if (!preg_match('#^https?://#i', $jlImg)) {
+                $jlImg = resolve_relative_url($sourceUrl, $jlImg);
+            }
+            if ($jlImg !== '' && ($authorAvatar === '' || $jlImg !== $authorAvatar)) {
+                if (stripos($contentHtml, $jlImg) === false) {
+                    $escapedSrc = htmlspecialchars($jlImg, ENT_QUOTES, 'UTF-8');
+                    $contentHtml .= '<p><img src="' . $escapedSrc . '" alt="" loading="lazy"></p>';
+                }
+            }
+        }
+
         $contentHtml = sanitize_webmention_html($contentHtml);
         $contentMd = strip_tags($contentHtml);
     }
@@ -366,7 +434,7 @@ function sanitize_webmention_html(string $html): string
         return '';
     }
 
-    $allowedTags = '<p><br><a><strong><em><b><i><blockquote><code><pre>';
+    $allowedTags = '<p><br><a><strong><em><b><i><blockquote><code><pre><img><figure><figcaption>';
     $stripped = strip_tags($trimmed, $allowedTags);
 
     $dom = new DOMDocument();
@@ -377,10 +445,11 @@ function sanitize_webmention_html(string $html): string
     @$dom->loadHTML('<div>' . $encoded . '</div>', LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
     libxml_clear_errors();
 
-    // Strip unapproved attributes and dangerous link schemes
+    // Strip unapproved attributes and dangerous link/image schemes
     $xpath = new DOMXPath($dom);
     $nodes = $xpath->query('//*');
     if ($nodes) {
+        $nodesToRemove = [];
         foreach ($nodes as $node) {
             if ($node->nodeType !== XML_ELEMENT_NODE) {
                 continue;
@@ -395,11 +464,36 @@ function sanitize_webmention_html(string $html): string
                     if (preg_match('#^(https?://|/|\#)#i', $href)) {
                         continue;
                     }
+                } elseif ($tag === 'img') {
+                    if (in_array($attrName, ['alt', 'title', 'width', 'height', 'class', 'loading'], true)) {
+                        continue;
+                    }
+                    if ($attrName === 'src') {
+                        $src = trim($attr->value);
+                        if (preg_match('#^https?://#i', $src)) {
+                            continue;
+                        }
+                    }
                 }
                 $attrsToRemove[] = $attr->name;
             }
             foreach ($attrsToRemove as $attrName) {
                 $node->removeAttribute($attrName);
+            }
+
+            if ($tag === 'img') {
+                $src = trim($node->getAttribute('src'));
+                if ($src === '' || !preg_match('#^https?://#i', $src)) {
+                    $nodesToRemove[] = $node;
+                } else {
+                    $node->setAttribute('loading', 'lazy');
+                }
+            }
+        }
+
+        foreach ($nodesToRemove as $remNode) {
+            if ($remNode->parentNode) {
+                $remNode->parentNode->removeChild($remNode);
             }
         }
     }

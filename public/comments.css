@@ -131,6 +131,14 @@
   margin: 0.5rem 0;
 }
 
+#comments .comment-body img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+}
+
 #comments .comment-actions {
   margin-top: 0.75rem;
 }

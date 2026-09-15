@@ -484,6 +484,9 @@ function admin_comment_preview_text(string $html, string $type = 'comment', int 
             $typeName = strtolower(t('comments.type_' . $type));
             return t('comments.reaction_no_content', ['type' => $typeName]);
         }
+        if (stripos($html, '<img') !== false) {
+            return '📷 [Image]';
+        }
         return t('comments.no_content');
     }
 
