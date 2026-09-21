@@ -95,7 +95,13 @@ function handle_comments_index(array $config, string $slug): void
     }
 
     $comments = fetch_published_comments($config, $slug);
-    $formatted = array_map(static function (array $comment) use ($config): array {
+    $authorAvatar = trim((string)($config['author']['avatar_url'] ?? ''));
+    $formatted = array_map(static function (array $comment) use ($config, $authorAvatar): array {
+        $isAuthor = is_author_comment($config, $comment['email'] ?? null, $comment['name']);
+        $avatarUrl = $comment['avatar_url'] ?? null;
+        if ($isAuthor && ($avatarUrl === null || $avatarUrl === '') && $authorAvatar !== '') {
+            $avatarUrl = $authorAvatar;
+        }
         return [
             'id' => (int)$comment['id'],
             'post_slug' => $comment['post_slug'],
@@ -106,8 +112,8 @@ function handle_comments_index(array $config, string $slug): void
             'website' => $comment['website'] ?? null,
             'type' => $comment['type'] ?? 'comment',
             'source_url' => $comment['source_url'] ?? null,
-            'avatar_url' => $comment['avatar_url'] ?? null,
-            'is_author' => is_author_comment($config, $comment['email'] ?? null, $comment['name']),
+            'avatar_url' => $avatarUrl,
+            'is_author' => $isAuthor,
         ];
     }, $comments);
 

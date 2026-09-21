@@ -9,6 +9,31 @@ function e(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+function font_stack_css(string $fontStack): string
+{
+    return match ($fontStack) {
+        'serif' => '"Merriweather", Georgia, "Times New Roman", serif',
+        'mono'  => '"Iosevka", ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, "DejaVu Sans Mono", monospace',
+        default => '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    };
+}
+
+function font_size_css(string $fontStack): string
+{
+    return match ($fontStack) {
+        'sans' => '1rem',
+        default => '1.15rem',
+    };
+}
+
+function logo_font_size_css(string $fontStack): string
+{
+    return match ($fontStack) {
+        'sans' => '2rem',
+        default => '2.5rem',
+    };
+}
+
 function build_comment_tree(array $comments): array
 {
     $indexed = [];
@@ -119,18 +144,24 @@ function render_admin_comments_table(
                 <details class="admin-comment-item<?php echo $index % 2 === 1 ? ' accent-bg' : ''; ?>" id="comment-<?php echo e((string)$comment['id']); ?>" name="comment">
                     <summary>
                         <span class="comment-summary-author">
-                            <?php if (!empty($comment['avatar_url'])) : ?>
-                                <img src="<?php echo e($comment['avatar_url']); ?>" alt="" class="admin-comment-avatar" width="20" height="20">
-                            <?php endif; ?>
-                            <strong>
-                                <?php if (!empty($comment['website'])) : ?>
-                                    <a href="<?php echo e($comment['website']); ?>" target="_blank" rel="noopener">
-                                        <?php echo e($comment['name']); ?>
-                                    </a>
-                                <?php else : ?>
-                                    <?php echo e($comment['name']); ?>
+                            <?php
+                            $isAuthor = is_author_comment($config, $comment['email'] ?? null, (string)($comment['name'] ?? ''));
+                            $displayAvatar = !empty($comment['avatar_url']) ? (string)$comment['avatar_url'] : ($isAuthor ? trim((string)($config['author']['avatar_url'] ?? '')) : '');
+                            ?>
+                            <span class="comment-author-header">
+                                <?php if ($displayAvatar !== '') : ?>
+                                    <img src="<?php echo e($displayAvatar); ?>" alt="" class="admin-comment-avatar" width="20" height="20">
                                 <?php endif; ?>
-                            </strong>
+                                <strong>
+                                    <?php if (!empty($comment['website'])) : ?>
+                                        <a href="<?php echo e($comment['website']); ?>" target="_blank" rel="noopener">
+                                            <?php echo e($comment['name']); ?>
+                                        </a>
+                                    <?php else : ?>
+                                        <?php echo e($comment['name']); ?>
+                                    <?php endif; ?>
+                                </strong>
+                            </span>
                             <?php if (!empty($comment['type']) && $comment['type'] !== 'comment') : ?>
                                 <span class="comment-type-badge type-<?php echo e($comment['type']); ?>">
                                     <?php echo e(t('comments.type_' . $comment['type'])); ?>
@@ -323,6 +354,12 @@ function render_admin_author_replies(
             <?php $isAuthorReply = is_author_comment($config, $reply['email'] ?? null, $reply['name']); ?>
             <article class="admin-author-reply">
                 <div class="admin-author-reply-meta">
+                    <?php
+                    $replyAvatar = !empty($reply['avatar_url']) ? (string)$reply['avatar_url'] : ($isAuthorReply ? trim((string)($config['author']['avatar_url'] ?? '')) : '');
+                    ?>
+                    <?php if ($replyAvatar !== '') : ?>
+                        <img src="<?php echo e($replyAvatar); ?>" alt="" class="admin-comment-avatar" width="20" height="20">
+                    <?php endif; ?>
                     <strong><?php echo e($reply['name']); ?></strong>
                     <?php if ($isAuthorReply) : ?>
                         <span class="author-badge"><?php echo e(t('comments.author_badge')); ?></span>

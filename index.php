@@ -19,6 +19,7 @@ require __DIR__ . '/includes/ses.php';
 require __DIR__ . '/includes/parsedown.php';
 require __DIR__ . '/includes/webmention.php';
 require_once __DIR__ . '/includes/i18n.php';
+require_once __DIR__ . '/includes/updates_check.php';
 pc_set_language((string)($config['language'] ?? 'en'));
 
 require_admin_login($config);
@@ -26,6 +27,10 @@ require_admin_login($config);
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
+
+$updateInfo = check_cached_updates();
+$adminFontStack = font_stack_css($config['admin_font_stack'] ?? 'mono');
+$adminCustomCssPath = __DIR__ . '/data/css/admin-custom.css';
 
 $messages = [];
 $errors = [];
@@ -178,6 +183,16 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" href="<?php echo e(pc_url('/public/favicon.png', $config)); ?>">
     <link rel="stylesheet" href="<?php echo e(pc_url('/public/style.css', $config)); ?>?v=<?php echo e((string)$styleVersion); ?>">
+    <style>
+        :root {
+            --font: <?php echo $adminFontStack; ?>;
+            --body-font-size: <?php echo font_size_css((string)($config['admin_font_stack'] ?? 'mono')); ?>;
+            --logo-font-size: <?php echo logo_font_size_css((string)($config['admin_font_stack'] ?? 'mono')); ?>;
+        }
+        <?php if (is_file($adminCustomCssPath)): ?>
+        <?php readfile($adminCustomCssPath); ?>
+        <?php endif; ?>
+    </style>
 </head>
 <body class="admin">
     <main class="admin-container">
@@ -192,6 +207,13 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
                 <span><?php echo e(t('dashboard.logout_btn')); ?></span>
             </a>
         </div>
+
+        <?php if (!empty($updateInfo['update_available'])): ?>
+            <p class="notice success admin-update-banner">
+                <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo e(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-upgrade"></use></svg>
+                <span><?php echo t('dashboard.update_banner', ['latest' => e($updateInfo['latest_version']), 'url' => pc_url('/updates.php', $config)]); ?></span>
+            </p>
+        <?php endif; ?>
         <div class="search-form">
             <form method="get" class="admin-search-form">
                 <div class="admin-search-row">
@@ -343,12 +365,15 @@ function save_author_reply(array $config, array $parent, string $content): ?arra
     $parsedown->setSafeMode(true);
     $parsedown->setBreaksEnabled(true);
 
+    $authorAvatar = trim((string)($author['avatar_url'] ?? ''));
+
     $replyData = [
         'post_slug' => $parent['post_slug'],
         'parent_id' => $parent['id'],
         'name' => $authorName,
         'email_encrypted' => encrypt_email($authorEmail, $config),
         'website' => null,
+        'avatar_url' => $authorAvatar !== '' ? $authorAvatar : null,
         'content_md' => $content,
         'content_html' => $parsedown->text($content),
         'created_at' => gmdate('Y-m-d H:i:s'),

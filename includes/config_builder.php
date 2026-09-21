@@ -52,6 +52,9 @@ function build_config_php(array $d): string
     $lines[] = "    'sodium_key' => hex2bin(" . var_export($d['sodium_key_hex'], true) . '),';
     $lines[] = "    'timezone' => " . var_export(normalize_comments_timezone((string)($d['timezone'] ?? default_comments_timezone())), true) . ',';
     $lines[] = "    'date_format' => " . var_export(normalize_comments_date_format((string)($d['date_format'] ?? default_comments_date_format())), true) . ',';
+    $lines[] = "    'admin_font_stack' => " . var_export((string)($d['admin_font_stack'] ?? 'mono'), true) . ',';
+    $lines[] = "    'mfa_secret' => " . var_export((string)($d['mfa_secret'] ?? ''), true) . ',';
+    $lines[] = "    'mfa_backup_codes' => " . export_config_array($d['mfa_backup_codes'] ?? [], 1) . ',';
     $lines[] = "    'privacy_policy_url' => " . var_export($d['privacy_policy_url'] ?? '/privacy#commenting', true) . ',';
     $lines[] = "    'spam_challenge' => [";
     $lines[] = "        'question' => " . var_export($d['spam_challenge_question'], true) . ',';

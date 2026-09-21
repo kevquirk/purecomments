@@ -1,5 +1,37 @@
 /** Get yer font on! **/
 @font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-display: swap;
+    font-weight: 400;
+    src: url("font/inter/regular.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-display: swap;
+    font-weight: 700;
+    src: url("font/inter/bold.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Inter";
+    font-style: italic;
+    font-display: swap;
+    font-weight: 400;
+    src: url("font/inter/italic.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Inter";
+    font-style: italic;
+    font-display: swap;
+    font-weight: 700;
+    src: url("font/inter/bold-italic.woff2") format("woff2");
+}
+
+@font-face {
     font-family: "Iosevka";
     font-style: normal;
     font-display: swap;
@@ -35,6 +67,42 @@
         url("font/iosevka/subset-bolditalic.woff") format("woff");
 }
 
+@font-face {
+    font-family: "Merriweather";
+    font-style: normal;
+    font-display: swap;
+    font-weight: 400;
+    src: url("font/merriweather/regular.woff2") format("woff2"),
+        url("font/merriweather/regular.woff") format("woff");
+}
+
+@font-face {
+    font-family: "Merriweather";
+    font-style: normal;
+    font-display: swap;
+    font-weight: 700;
+    src: url("font/merriweather/bold.woff2") format("woff2"),
+        url("font/merriweather/bold.woff") format("woff");
+}
+
+@font-face {
+    font-family: "Merriweather";
+    font-style: italic;
+    font-display: swap;
+    font-weight: 400;
+    src: url("font/merriweather/italic.woff2") format("woff2"),
+        url("font/merriweather/italic.woff") format("woff");
+}
+
+@font-face {
+    font-family: "Merriweather";
+    font-style: italic;
+    font-display: swap;
+    font-weight: 700;
+    src: url("font/merriweather/bold-italic.woff2") format("woff2"),
+        url("font/merriweather/bold-italic.woff") format("woff");
+}
+
 /** Global colour variables **/
 :root {
     --text: #222;
@@ -68,7 +136,7 @@ body {
     color: var(--text);
     background: var(--bg);
     font-family: var(--font);
-    font-size: 1.15rem;
+    font-size: var(--body-font-size, 1.15rem);
     font-size-adjust: 0.52;
     line-height: 1.5;
     margin: 0;
@@ -141,6 +209,13 @@ main.admin-container {
     padding: clamp(1rem, 2vw, 2rem);
 }
 
+.settings-container {
+    max-width: 1000px;
+    margin: 3rem auto;
+    border: var(--standard-border);
+    padding: 0 1rem;
+}
+
 .admin-top-actions {
     display: flex;
     gap: 0.5rem;
@@ -158,7 +233,7 @@ main.admin-container {
     color: var(--accent);
     border: 3px solid currentColor;
     font-weight: bold;
-    font-size: 2.5rem;
+    font-size: var(--logo-font-size, 2.5rem);
     line-height: 1;
     display: inline-flex;
     align-items: stretch;
@@ -348,7 +423,13 @@ main.admin-container {
 .admin-action {
     margin-bottom: 0.75rem;
     display: flex;
+    align-items: center;
     gap: 0.5rem;
+}
+
+.admin-action button,
+.admin-action a.button {
+    margin: 0;
 }
 
 button,
@@ -361,7 +442,6 @@ a.button,
     color: var(--text);
     border: var(--standard-border);
     background: var(--bg);
-    transition: color .1s ease-in-out, .1s ease-in-out;
     text-decoration: none;
     text-transform: uppercase;
     margin: 1.5rem 0;
@@ -369,6 +449,9 @@ a.button,
     font-size: inherit;
     font-family: inherit;
     font-weight: bold;
+    line-height: 1.2;
+    box-sizing: border-box;
+    vertical-align: middle;
     transition: 0.25s;
     cursor: pointer;
 }
@@ -420,8 +503,8 @@ a.button:hover {
     display: none;
 }
 
-.admin-reply label:not(.checkbox-label):not(.inline-checkbox),
-.admin-form label:not(.checkbox-label):not(.inline-checkbox) {
+.admin-reply label:not(.checkbox-label):not(.inline-checkbox):not(.inline-radio):not(.font-preview-option),
+.admin-form label:not(.checkbox-label):not(.inline-checkbox):not(.inline-radio):not(.font-preview-option) {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
@@ -495,12 +578,122 @@ a.button:hover {
 .admin-form-buttons {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 1rem;
     margin: 1.5rem 0;
 }
 
-.admin-form-buttons button {
+.admin-form-buttons button,
+.admin-form-buttons a.button {
     margin: 0;
+}
+
+.settings-tabs-nav {
+    margin: 1.5rem 0 2rem;
+    border-bottom: var(--standard-border);
+}
+
+.settings-tabs-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: -2px;
+}
+
+.settings-tab-item {
+    margin: 0;
+    padding: 0;
+}
+
+.settings-tab-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.15rem;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    color: var(--text);
+    background: var(--accent-bg);
+    border: var(--standard-border);
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.settings-tab-link:hover {
+    background: var(--text);
+    color: var(--bg);
+}
+
+.settings-tab-link:hover .button-icon {
+    stroke: currentColor;
+}
+
+.settings-tab-link.active {
+    background: var(--bg);
+    color: var(--accent);
+    border-bottom: 2px solid var(--bg);
+    position: relative;
+    z-index: 2;
+}
+
+.settings-tab-link.active .button-icon {
+    stroke: var(--accent);
+}
+
+.font-preview-card {
+    border: var(--standard-border);
+    background: var(--accent-bg);
+    padding: 1rem 1.25rem;
+    margin: 0.5rem 0 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.font-preview-option,
+.inline-radio {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.65rem;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.3;
+}
+
+.font-preview-option input[type="radio"],
+.inline-radio input[type="radio"] {
+    margin: 0;
+    width: auto;
+    cursor: pointer;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+.font-preview-sans {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.font-preview-serif {
+    font-family: "Merriweather", Georgia, "Times New Roman", serif;
+}
+
+.font-preview-mono {
+    font-family: "Iosevka", ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+}
+
+
+.editor-textarea-code {
+    font-family: "Iosevka", ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+    font-size: 0.95rem;
+    tab-size: 4;
+    white-space: pre;
 }
 
 .comments-empty {
@@ -574,6 +767,13 @@ a.button:hover {
     gap: 0.2rem;
 }
 
+.comment-author-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    line-height: 1.2;
+}
+
 .comment-author-email {
     font-size: 0.85rem;
     color: color-mix(in srgb, var(--text) 75%, transparent);
@@ -581,13 +781,12 @@ a.button:hover {
 }
 
 .admin-comment-avatar {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     object-fit: cover;
-    display: inline-block;
-    vertical-align: middle;
-    margin-right: 0.35rem;
+    flex-shrink: 0;
+    margin: 0;
     border: 1px solid var(--border);
 }
 
@@ -661,9 +860,9 @@ a.button:hover {
     margin-top: 0;
 }
 
-.admin-comment-detail img,
-.admin-comment-body img,
-.admin-comment-parent img {
+.admin-comment-detail img:not(.admin-comment-avatar),
+.admin-comment-body img:not(.admin-comment-avatar),
+.admin-comment-parent img:not(.admin-comment-avatar) {
     max-width: 100%;
     height: auto;
     display: block;
@@ -683,8 +882,9 @@ a.button:hover {
 
 .admin-author-reply-meta {
     display: flex;
-    gap: 0.55rem;
+    gap: 0.5rem;
     align-items: center;
+    line-height: 1.2;
     margin-bottom: 0.35rem;
 }
 
@@ -780,16 +980,23 @@ a.button:hover {
     }
 }
 
+.notice.error {
+    border: 2px solid var(--red);
+    background: #fff5f5;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 1rem;
+}
+
 .notice.error ul {
+    list-style: none;
+    margin: 0;
     padding: 0;
 }
 
 .notice.error li {
     color: var(--red);
     list-style-type: none;
-    border: 2px solid;
-    padding: 0.5rem;
-    text-align: center;
+    padding: 0.25rem 0;
 }
 
 .notice.success,
@@ -805,6 +1012,10 @@ a.button:hover {
     .notice.success,
     .notice.filter-active {
         background: rgba(163, 190, 140, 0.1);
+    }
+
+    .notice.error {
+        background: rgba(255, 138, 128, 0.1);
     }
 
     .admin-section h2 {
@@ -826,6 +1037,12 @@ a.button:hover {
 .commenter-filter-link {
     font-size: 0.8rem;
     white-space: nowrap;
+}
+
+.admin-update-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .no-top-margin {

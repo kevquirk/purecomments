@@ -14,6 +14,7 @@ start_secure_session();
 $config = require __DIR__ . '/config.php';
 require __DIR__ . '/includes/admin_auth.php';
 require_once __DIR__ . '/includes/i18n.php';
+require_once __DIR__ . '/includes/render.php';
 pc_set_language((string)($config['language'] ?? 'en'));
 
 require_admin_login($config);
@@ -123,6 +124,7 @@ function preserved_top_level_paths(): array
     return [
         'config.php',
         'db',
+        'data',
         'setup.php',
         '.htaccess',
         'VERSION',
@@ -825,6 +827,16 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
     <title><?php echo h(t('updates.title')); ?></title>
     <link rel="icon" type="image/png" href="<?php echo h(pc_url('/public/favicon.png', $config)); ?>">
     <link rel="stylesheet" href="<?php echo h(pc_url('/public/style.css', $config)); ?>?v=<?php echo h((string)$styleVersion); ?>">
+    <style>
+        :root {
+            --font: <?php echo font_stack_css($config['admin_font_stack'] ?? 'mono'); ?>;
+            --body-font-size: <?php echo font_size_css((string)($config['admin_font_stack'] ?? 'mono')); ?>;
+            --logo-font-size: <?php echo logo_font_size_css((string)($config['admin_font_stack'] ?? 'mono')); ?>;
+        }
+        <?php if (is_file(__DIR__ . '/data/css/admin-custom.css')): ?>
+        <?php readfile(__DIR__ . '/data/css/admin-custom.css'); ?>
+        <?php endif; ?>
+    </style>
 </head>
 <body class="admin">
     <main class="admin-container">
@@ -840,154 +852,158 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
             </a>
         </div>
 
-        <h1><?php echo h(t('updates.heading')); ?></h1>
+        <div class="settings-container">
+            <h1><?php echo h(t('updates.heading')); ?></h1>
 
-        <section class="admin-section">
-            <h2><?php echo h(t('updates.section_version')); ?></h2>
-            <p><strong><?php echo h(t('updates.current_version')); ?></strong> <?php echo h($currentVersionDisplay); ?></p>
-            <?php if ($latestBackup !== '') : ?>
-                <p><strong><?php echo h(t('updates.last_backup')); ?></strong>
-                    <?php if ($latestBackupTimestamp !== '') : ?>
-                        <?php echo h($latestBackupTimestamp); ?>
-                    <?php else : ?>
-                        <?php echo h(t('updates.unknown_time')); ?>
-                    <?php endif; ?>
-                    (<code><?php echo h($latestBackup); ?></code>)
-                </p>
-            <?php endif; ?>
-            <p><strong><?php echo h(t('updates.repository')); ?></strong> <a href="https://github.com/kevquirk/purecomments" target="_blank" rel="noopener noreferrer">github.com/kevquirk/purecomments</a></p>
-            <p>
-                <a class="button" href="<?php echo h(pc_url('/updates.php', $config)); ?>?check=1">
-                    <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-upgrade"></use></svg>
-                    <?php echo h(t('updates.check_btn')); ?>
-                </a>
-                <a class="button" href="<?php echo h(pc_url('/updates.php', $config)); ?>?package_plan=1">
-                    <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-upgrade"></use></svg>
-                    <?php echo h(t('updates.inspect_btn')); ?>
-                </a>
-            </p>
+            <?php
+            $activeTab = 'updates';
+            require __DIR__ . '/includes/admin_settings_nav.php';
+            ?>
 
-            <?php if ($latest !== null && !($latest['ok'] ?? false)) : ?>
-                <p class="notice error"><?php echo h((string) ($latest['error'] ?? 'Unable to check for updates.')); ?></p>
-            <?php endif; ?>
-
-            <?php if ($latest !== null && ($latest['ok'] ?? false)) : ?>
-                <?php
-                $latestTag = (string) ($latest['tag'] ?? '');
-                $currentVersion = detect_current_purecomments_version();
-                $updateAvailable = ($latestTag !== '' && $currentVersion !== 'unknown' && !versions_match($currentVersion, $latestTag));
-                $displayLatestVersion = ltrim($latestTag, 'v');
-                ?>
-                <?php if ($updateAvailable) : ?>
-                    <h3 class="no-top-margin">🎉 New Version Available (v<?php echo h($displayLatestVersion); ?>)</h3>
-                <?php endif; ?>
-                <p><strong><?php echo h(t('updates.latest_release')); ?></strong> <?php echo h($latest['tag'] !== '' ? (string) $latest['tag'] : (string) ($latest['name'] ?? 'Unknown')); ?></p>
-                <?php if (($latest['published_at'] ?? '') !== '') : ?>
-                    <p><strong><?php echo h(t('updates.published_label')); ?></strong> <?php echo h((string) date('Y-m-d', strtotime((string) $latest['published_at']))); ?></p>
-                <?php endif; ?>
-                <p><a href="<?php echo h((string) ($latest['url'] ?? 'https://github.com/kevquirk/purecomments/releases')); ?>" target="_blank" rel="noopener noreferrer"><?php echo h(t('updates.release_notes')); ?></a></p>
-            <?php endif; ?>
-        </section>
-
-        <?php if ($packagePlanError !== '') : ?>
-            <section class="admin-section">
-                <h2><?php echo h(t('updates.section_package')); ?></h2>
-                <p class="notice error"><?php echo h($packagePlanError); ?></p>
-            </section>
-        <?php endif; ?>
-
-        <?php if ($packagePlan !== null && ($packagePlan['ok'] ?? false)) : ?>
-            <section class="admin-section">
-                <h2><?php echo h(t('updates.section_package')); ?></h2>
-                <?php if (!empty($packagePlan['already_latest'])) : ?>
-                    <p><?php echo h((string) ($packagePlan['message'] ?? t('updates.msg_already_latest', ['version' => '']))); ?></p>
-                <?php else : ?>
-                    <p><strong><?php echo h(t('updates.planned_actions')); ?></strong></p>
-                    <ul>
-                        <li><strong><?php echo h(t('updates.count_add')); ?></strong> <?php echo h((string) ($packagePlan['counts']['add'] ?? 0)); ?></li>
-                        <li><strong><?php echo h(t('updates.count_replace')); ?></strong> <?php echo h((string) ($packagePlan['counts']['replace'] ?? 0)); ?></li>
-                        <li><strong><?php echo h(t('updates.count_unchanged')); ?></strong> <?php echo h((string) ($packagePlan['counts']['unchanged'] ?? 0)); ?></li>
-                        <li><strong><?php echo h(t('updates.count_preserved')); ?></strong> <?php echo h((string) ($packagePlan['counts']['skip'] ?? 0)); ?></li>
-                        <li><strong><?php echo h(t('updates.count_local_only')); ?></strong> <?php echo h((string) ($packagePlan['counts']['local_only'] ?? 0)); ?></li>
-                    </ul>
-
-                    <?php if (!empty($packagePlan['will_add'])) : ?>
-                        <p><strong><?php echo h(t('updates.will_add')); ?></strong></p>
-                        <ul>
-                            <?php foreach ($packagePlan['will_add'] as $path) : ?>
-                                <li><code><?php echo h((string) $path); ?></code></li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php endif; ?>
-
-                    <?php if (!empty($packagePlan['will_replace'])) : ?>
-                        <p><strong><?php echo h(t('updates.will_replace')); ?></strong></p>
-                        <ul>
-                            <?php foreach ($packagePlan['will_replace'] as $path) : ?>
-                                <li><code><?php echo h((string) $path); ?></code></li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php endif; ?>
-
-                    <?php if (!empty($packagePlan['local_only'])) : ?>
-                        <p><strong><?php echo h(t('updates.local_only_files')); ?></strong></p>
-                        <ul>
-                            <?php foreach ($packagePlan['local_only'] as $path) : ?>
-                                <li><code><?php echo h((string) $path); ?></code></li>
-                            <?php endforeach; ?>
-                        </ul>
-                    <?php endif; ?>
-
-                    <form method="post" action="<?php echo h(pc_url('/updates.php', $config)); ?>" onsubmit="return confirm(<?php echo json_encode(t('updates.confirm_apply')); ?>);">
-                        <input type="hidden" name="csrf_token" value="<?php echo h((string) $_SESSION['csrf_token']); ?>">
-                        <button class="button" type="submit" name="apply_update" value="1">
-                            <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-upgrade"></use></svg>
-                            <?php echo h(t('updates.apply_btn')); ?>
-                        </button>
-                    </form>
-                <?php endif; ?>
-            </section>
-        <?php endif; ?>
-
-        <?php if (!empty($availableBackups)) : ?>
-            <section class="admin-section">
-                <h2><?php echo h(t('updates.section_backup')); ?></h2>
-                <p><?php echo h(t('updates.backup_note')); ?></p>
-                <form method="post" action="<?php echo h(pc_url('/updates.php', $config)); ?>" class="admin-form">
-                    <input type="hidden" name="csrf_token" value="<?php echo h((string) $_SESSION['csrf_token']); ?>">
-                    <label for="backup_name"><?php echo h(t('updates.available_backups')); ?></label>
-                    <select id="backup_name" name="backup_name" required>
-                        <?php foreach ($availableBackups as $backupName) : ?>
-                            <option value="<?php echo h((string) $backupName); ?>"><?php echo h((string) $backupName); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <div class="admin-action">
-                        <button class="button" type="submit" name="restore_backup" value="1" onclick="return confirm(<?php echo json_encode(t('updates.confirm_restore')); ?>);">
-                            <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-upgrade"></use></svg>
-                            <?php echo h(t('updates.restore_btn')); ?>
-                        </button>
-                        <button class="button danger" type="submit" name="delete_backup" value="1" onclick="return confirm(<?php echo json_encode(t('updates.confirm_delete_backup')); ?>);">
-                            <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-delete"></use></svg>
-                            <?php echo h(t('updates.delete_backup_btn')); ?>
-                        </button>
-                    </div>
-                </form>
-            </section>
-        <?php endif; ?>
-
-        <?php if ($applyResult !== null) : ?>
-            <section class="admin-section">
-                <h2><?php echo h(t('updates.section_result')); ?></h2>
+            <?php if ($applyResult !== null) : ?>
                 <?php if (!($applyResult['ok'] ?? false)) : ?>
                     <p class="notice error"><?php echo h((string) ($applyResult['error'] ?? '')); ?></p>
                 <?php else : ?>
                     <p class="notice success"><?php echo h((string) ($applyResult['message'] ?? '')); ?></p>
                     <?php if (!empty($applyResult['backup_path'])) : ?>
-                        <p><strong><?php echo h(t('updates.backup_path')); ?></strong> <code><?php echo h((string) $applyResult['backup_path']); ?></code></p>
+                        <p class="notice"><strong><?php echo h(t('updates.backup_path')); ?></strong> <code><?php echo h((string) $applyResult['backup_path']); ?></code></p>
                     <?php endif; ?>
                 <?php endif; ?>
+            <?php endif; ?>
+
+            <section class="admin-section">
+                <h2><?php echo h(t('updates.section_version')); ?></h2>
+                <p><strong><?php echo h(t('updates.current_version')); ?></strong> <?php echo h($currentVersionDisplay); ?></p>
+                <?php if ($latestBackup !== '') : ?>
+                    <p><strong><?php echo h(t('updates.last_backup')); ?></strong>
+                        <?php if ($latestBackupTimestamp !== '') : ?>
+                            <?php echo h($latestBackupTimestamp); ?>
+                        <?php else : ?>
+                            <?php echo h(t('updates.unknown_time')); ?>
+                        <?php endif; ?>
+                        (<code><?php echo h($latestBackup); ?></code>)
+                    </p>
+                <?php endif; ?>
+                <p><strong><?php echo h(t('updates.repository')); ?></strong> <a href="https://github.com/kevquirk/purecomments" target="_blank" rel="noopener noreferrer">github.com/kevquirk/purecomments</a></p>
+                <p>
+                    <a class="button" href="<?php echo h(pc_url('/updates.php', $config)); ?>?check=1">
+                        <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-upgrade"></use></svg>
+                        <?php echo h(t('updates.check_btn')); ?>
+                    </a>
+                    <a class="button" href="<?php echo h(pc_url('/updates.php', $config)); ?>?package_plan=1">
+                        <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-upgrade"></use></svg>
+                        <?php echo h(t('updates.inspect_btn')); ?>
+                    </a>
+                </p>
+
+                <?php if ($latest !== null && !($latest['ok'] ?? false)) : ?>
+                    <p class="notice error"><?php echo h((string) ($latest['error'] ?? 'Unable to check for updates.')); ?></p>
+                <?php endif; ?>
+
+                <?php if ($latest !== null && ($latest['ok'] ?? false)) : ?>
+                    <?php
+                    $latestTag = (string) ($latest['tag'] ?? '');
+                    $currentVersion = detect_current_purecomments_version();
+                    $updateAvailable = ($latestTag !== '' && $currentVersion !== 'unknown' && !versions_match($currentVersion, $latestTag));
+                    $displayLatestVersion = ltrim($latestTag, 'v');
+                    ?>
+                    <?php if ($updateAvailable) : ?>
+                        <h3 class="no-top-margin">🎉 New Version Available (v<?php echo h($displayLatestVersion); ?>)</h3>
+                    <?php endif; ?>
+                    <p><strong><?php echo h(t('updates.latest_release')); ?></strong> <?php echo h($latest['tag'] !== '' ? (string) $latest['tag'] : (string) ($latest['name'] ?? 'Unknown')); ?></p>
+                    <?php if (($latest['published_at'] ?? '') !== '') : ?>
+                        <p><strong><?php echo h(t('updates.published_label')); ?></strong> <?php echo h((string) date('Y-m-d', strtotime((string) $latest['published_at']))); ?></p>
+                    <?php endif; ?>
+                    <p><a href="<?php echo h((string) ($latest['url'] ?? 'https://github.com/kevquirk/purecomments/releases')); ?>" target="_blank" rel="noopener noreferrer"><?php echo h(t('updates.release_notes')); ?></a></p>
+                <?php endif; ?>
             </section>
-        <?php endif; ?>
+
+            <?php if ($packagePlanError !== '') : ?>
+                <section class="admin-section">
+                    <h2><?php echo h(t('updates.section_package')); ?></h2>
+                    <p class="notice error"><?php echo h($packagePlanError); ?></p>
+                </section>
+            <?php endif; ?>
+
+            <?php if ($packagePlan !== null && ($packagePlan['ok'] ?? false)) : ?>
+                <section class="admin-section">
+                    <h2><?php echo h(t('updates.section_package')); ?></h2>
+                    <?php if (!empty($packagePlan['already_latest'])) : ?>
+                        <p><?php echo h((string) ($packagePlan['message'] ?? t('updates.msg_already_latest', ['version' => '']))); ?></p>
+                    <?php else : ?>
+                        <p><strong><?php echo h(t('updates.planned_actions')); ?></strong></p>
+                        <ul>
+                            <li><strong><?php echo h(t('updates.count_add')); ?></strong> <?php echo h((string) ($packagePlan['counts']['add'] ?? 0)); ?></li>
+                            <li><strong><?php echo h(t('updates.count_replace')); ?></strong> <?php echo h((string) ($packagePlan['counts']['replace'] ?? 0)); ?></li>
+                            <li><strong><?php echo h(t('updates.count_unchanged')); ?></strong> <?php echo h((string) ($packagePlan['counts']['unchanged'] ?? 0)); ?></li>
+                            <li><strong><?php echo h(t('updates.count_preserved')); ?></strong> <?php echo h((string) ($packagePlan['counts']['skip'] ?? 0)); ?></li>
+                            <li><strong><?php echo h(t('updates.count_local_only')); ?></strong> <?php echo h((string) ($packagePlan['counts']['local_only'] ?? 0)); ?></li>
+                        </ul>
+
+                        <?php if (!empty($packagePlan['will_add'])) : ?>
+                            <p><strong><?php echo h(t('updates.will_add')); ?></strong></p>
+                            <ul>
+                                <?php foreach ($packagePlan['will_add'] as $path) : ?>
+                                    <li><code><?php echo h((string) $path); ?></code></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+
+                        <?php if (!empty($packagePlan['will_replace'])) : ?>
+                            <p><strong><?php echo h(t('updates.will_replace')); ?></strong></p>
+                            <ul>
+                                <?php foreach ($packagePlan['will_replace'] as $path) : ?>
+                                    <li><code><?php echo h((string) $path); ?></code></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+
+                        <?php if (!empty($packagePlan['local_only'])) : ?>
+                            <p><strong><?php echo h(t('updates.local_only_files')); ?></strong></p>
+                            <ul>
+                                <?php foreach ($packagePlan['local_only'] as $path) : ?>
+                                    <li><code><?php echo h((string) $path); ?></code></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+
+                        <form method="post" action="<?php echo h(pc_url('/updates.php', $config)); ?>" onsubmit="return confirm(<?php echo json_encode(t('updates.confirm_apply')); ?>);">
+                            <input type="hidden" name="csrf_token" value="<?php echo h((string) $_SESSION['csrf_token']); ?>">
+                            <button class="button" type="submit" name="apply_update" value="1">
+                                <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-upgrade"></use></svg>
+                                <?php echo h(t('updates.apply_btn')); ?>
+                            </button>
+                        </form>
+                    <?php endif; ?>
+                </section>
+            <?php endif; ?>
+
+            <?php if (!empty($availableBackups)) : ?>
+                <section class="admin-section">
+                    <h2><?php echo h(t('updates.section_backup')); ?></h2>
+                    <p><?php echo h(t('updates.backup_note')); ?></p>
+                    <form method="post" action="<?php echo h(pc_url('/updates.php', $config)); ?>" class="admin-form">
+                        <input type="hidden" name="csrf_token" value="<?php echo h((string) $_SESSION['csrf_token']); ?>">
+                        <label for="backup_name"><?php echo h(t('updates.available_backups')); ?></label>
+                        <select id="backup_name" name="backup_name" required>
+                            <?php foreach ($availableBackups as $backupName) : ?>
+                                <option value="<?php echo h((string) $backupName); ?>"><?php echo h((string) $backupName); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="admin-action">
+                            <button class="button" type="submit" name="restore_backup" value="1" onclick="return confirm(<?php echo json_encode(t('updates.confirm_restore')); ?>);">
+                                <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-upgrade"></use></svg>
+                                <?php echo h(t('updates.restore_btn')); ?>
+                            </button>
+                            <button class="button danger" type="submit" name="delete_backup" value="1" onclick="return confirm(<?php echo json_encode(t('updates.confirm_delete_backup')); ?>);">
+                                <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-delete"></use></svg>
+                                <?php echo h(t('updates.delete_backup_btn')); ?>
+                            </button>
+                        </div>
+                    </form>
+                </section>
+            <?php endif; ?>
+        </div>
     </main>
 </body>
 </html>
