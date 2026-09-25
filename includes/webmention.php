@@ -625,7 +625,13 @@ function discover_webmention_endpoint(string $targetUrl): ?string
  */
 function send_outgoing_webmention(string $sourceUrl, string $targetUrl, array $config = []): bool
 {
-    $isBridgyOrFediverse = (strpos($targetUrl, 'brid.gy') !== false || strpos($targetUrl, 'mastodon') !== false);
+    $isBridgyOrFediverse = (
+        strpos($targetUrl, 'brid.gy') !== false
+        || strpos($targetUrl, 'mastodon') !== false
+        || preg_match('#https?://[^/]+/@[\w.-]+(?:/\d+)?#i', $targetUrl) === 1
+        || preg_match('#https?://[^/]+/users/[\w.-]+(?:/statuses/\d+)?#i', $targetUrl) === 1
+        || preg_match('#https?://[^/]+/(?:notice|notes)/\w+#i', $targetUrl) === 1
+    );
 
     if ($isBridgyOrFediverse) {
         $endpoint = 'https://brid.gy/publish/webmention';

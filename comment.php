@@ -29,9 +29,7 @@ if (!$comment || $comment['status'] !== 'published') {
 }
 
 $baseUrl = rtrim((string)($config['moderation']['base_url'] ?? ''), '/');
-$publicBaseUrl = rtrim((string)($config['post_base_url'] ?? ''), '/');
-$canonicalBaseUrl = $publicBaseUrl !== '' ? $publicBaseUrl : $baseUrl;
-$commentUrl = $canonicalBaseUrl . '/comment.php?id=' . $comment['id'];
+$commentUrl = $baseUrl . '/comment.php?id=' . $comment['id'];
 $webmentionEndpoint = $baseUrl . '/api/webmention';
 $fediverseProfileUrl = trim((string)($config['webmentions']['fediverse_profile_url'] ?? ''));
 
@@ -40,23 +38,7 @@ $inReplyToUrl = null;
 if (!empty($comment['parent_id'])) {
     $parent = fetch_comment_by_id($config, (int)$comment['parent_id']);
     if ($parent) {
-        $rawTarget = !empty($parent['source_url']) ? $parent['source_url'] : (!empty($parent['website']) ? $parent['website'] : null);
-        if ($rawTarget !== null) {
-            // Translate Bridgy proxy comment URL into native Fediverse post URL for in-reply-to threading
-            if (preg_match('#^https?://brid\.gy/comment/mastodon/@?([^/@]+)@([^/@]+)/(\d+)(?:/(\d+))?#i', $rawTarget, $m)) {
-                $user = $m[1];
-                $instance = $m[2];
-                $targetStatusId = !empty($m[4]) ? $m[4] : $m[3];
-                $inReplyToUrl = "https://{$instance}/@{$user}/{$targetStatusId}";
-            } elseif (preg_match('#^https?://brid\.gy/comment/mastodon/([^/@]+)/([^/@]+)/(\d+)(?:/(\d+))?#i', $rawTarget, $m)) {
-                $instance = $m[1];
-                $user = $m[2];
-                $targetStatusId = !empty($m[4]) ? $m[4] : $m[3];
-                $inReplyToUrl = "https://{$instance}/@{$user}/{$targetStatusId}";
-            } else {
-                $inReplyToUrl = $rawTarget;
-            }
-        }
+        $inReplyToUrl = !empty($parent['source_url']) ? $parent['source_url'] : (!empty($parent['website']) ? $parent['website'] : null);
     }
 }
 

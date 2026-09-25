@@ -748,6 +748,8 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
                     <input id="spam_challenge_placeholder" name="spam_challenge_placeholder" value="<?php echo h($form['spam_challenge_placeholder']); ?>">
 
                     <h2><?php echo h(t('settings.section_webmentions')); ?></h2>
+
+                    <p class="notice error">Before enabling Webmentions, please ensure you have <a target="_blank" href="https://docs.purecomments.org/webmentions-and-fediverse/">read the docs</a> first.</p>
                     <label class="inline-checkbox checkbox-label" for="webmentions_enabled">
                         <input id="webmentions_enabled" name="webmentions_enabled" type="checkbox" value="1" <?php echo $form['webmentions_enabled'] ? 'checked' : ''; ?>>
                         <span><?php echo h(t('settings.field_webmentions_enabled')); ?></span>
