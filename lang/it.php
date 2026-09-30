@@ -272,7 +272,7 @@ return [
     'updates' => [
         'title'                  => 'Aggiornamenti — Pure Comments',
         'heading'                => 'Aggiornamenti',
-        'back_btn'               => 'Torna alle impostazioni',
+        'back_btn'               => 'Torna ai commenti',
         'logout_btn'             => 'Esci',
         'section_version'        => 'Controllo versione',
         'current_version'        => 'Versione attuale:',

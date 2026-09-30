@@ -272,7 +272,7 @@ return [
     'updates' => [
         'title'                  => 'Comments Updates',
         'heading'                => 'Updates',
-        'back_btn'               => 'Back to settings',
+        'back_btn'               => 'Back to comments',
         'logout_btn'             => 'Log out',
         'section_version'        => 'Version check',
         'current_version'        => 'Current version:',

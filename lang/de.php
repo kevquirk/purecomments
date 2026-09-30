@@ -272,7 +272,7 @@ return [
     'updates' => [
         'title'                     => 'Comments-Updates',
         'heading'                   => 'Updates',
-        'back_btn'                  => 'Zurück zu Einstellungen',
+        'back_btn'                  => 'Zurück zu Kommentaren',
         'logout_btn'                => 'Abmelden',
         'section_version'           => 'Versionsüberprüfung',
         'current_version'           => 'Aktuelle Version:',

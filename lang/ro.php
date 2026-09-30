@@ -275,7 +275,7 @@ return [
     'updates' => [
         'title'                  => 'Actualizări comentarii',
         'heading'                => 'Actualizări',
-        'back_btn'               => 'Înapoi la setări',
+        'back_btn'               => 'Înapoi la comentarii',
         'logout_btn'             => 'Deconectare',
         'section_version'        => 'Verificare versiune',
         'current_version'        => 'Versiunea curentă:',

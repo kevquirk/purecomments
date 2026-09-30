@@ -272,7 +272,7 @@ return [
     'updates' => [
         'title'                  => 'Mises à jour — Pure Comments',
         'heading'                => 'Mises à jour',
-        'back_btn'               => 'Retour aux paramètres',
+        'back_btn'               => 'Retour aux commentaires',
         'logout_btn'             => 'Se déconnecter',
         'section_version'        => 'Vérification de version',
         'current_version'        => 'Version actuelle:',

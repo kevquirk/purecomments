@@ -842,7 +842,7 @@ $styleVersion = filemtime(__DIR__ . '/public/style.css');
     <main class="admin-container">
         <div class="admin-top-actions">
             <span class="admin-logo"><span class="pure">PURE</span><span class="service">COMMENTS</span></span>
-            <a class="button" href="<?php echo h(pc_url('/settings.php', $config)); ?>">
+            <a class="button" href="<?php echo h(pc_url('/', $config)); ?>">
                 <svg class="button-icon" aria-hidden="true" focusable="false"><use href="<?php echo h(pc_url('/public/icons/sprite.svg', $config)); ?>#icon-back"></use></svg>
                 <span><?php echo h(t('updates.back_btn')); ?></span>
             </a>
