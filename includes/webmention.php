@@ -107,7 +107,6 @@ function fetch_webmention_source(string $sourceUrl, string $targetUrl): array
             $finalUrl = $effective;
         }
         $curlErr = curl_error($ch);
-        curl_close($ch);
 
         if (!is_string($raw) || $status < 200 || $status >= 300) {
             return ['ok' => false, 'error' => 'Failed to fetch source page: ' . ($curlErr ?: "HTTP {$status}")];
@@ -374,7 +373,6 @@ function discover_webmention_endpoint(string $targetUrl): ?string
     $response = curl_exec($ch);
     $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
     $effectiveUrl = (string)curl_getinfo($ch, CURLINFO_EFFECTIVE_URL) ?: $targetUrl;
-    curl_close($ch);
 
     if (!is_string($response)) {
         return null;
@@ -431,7 +429,6 @@ function send_outgoing_webmention(string $sourceUrl, string $targetUrl, array $c
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         $res = curl_exec($ch);
         $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-        curl_close($ch);
 
         return $status >= 200 && $status < 300;
     }

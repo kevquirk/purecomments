@@ -44,7 +44,6 @@ function check_cached_updates(bool $forceRefresh = false): array
                     curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
                     $exec = curl_exec($ch);
                     $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-                    curl_close($ch);
                     if (is_string($exec) && $status >= 200 && $status < 300) {
                         $raw = $exec;
                     }

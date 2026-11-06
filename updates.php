@@ -49,7 +49,6 @@ function fetch_latest_purecomments_release(): array
             $raw = curl_exec($ch);
             $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
             $curlErr = curl_error($ch);
-            curl_close($ch);
 
             if (!is_string($raw) || $status < 200 || $status >= 300) {
                 $message = $curlErr !== '' ? $curlErr : t('updates.err_github_failed', ['status' => $status]);
@@ -222,7 +221,6 @@ function download_url_to_file(string $url, string $destination): ?string
 
         $fp = @fopen($destination, 'wb');
         if ($fp === false) {
-            curl_close($ch);
             return 'Unable to create temporary download file.';
         }
 
@@ -234,7 +232,6 @@ function download_url_to_file(string $url, string $destination): ?string
         $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         $curlErr = curl_error($ch);
         fclose($fp);
-        curl_close($ch);
 
         if ($ok !== true || $status < 200 || $status >= 300) {
             return $curlErr !== '' ? $curlErr : t('updates.err_curl_download', ['status' => $status]);

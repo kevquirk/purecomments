@@ -256,7 +256,6 @@ function ensure_schema(PDO $pdo): void
                         $html = curl_exec($ch);
                         $httpCode = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
                         $effectiveUrl = (string)curl_getinfo($ch, CURLINFO_EFFECTIVE_URL) ?: $sourceUrl;
-                        curl_close($ch);
                         if (is_string($html) && $httpCode >= 200 && $httpCode < 300) {
                             $parsed = parse_microformats_or_html($html, $effectiveUrl, '');
                             if (!empty($parsed['title'])) {
